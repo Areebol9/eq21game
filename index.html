@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>♠ 算式21点 ♣</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div id="header-bar">
+  <div class="title" onclick="goToMenu()" title="返回主菜单">♠ 算式<span class="num-21">21</span>点 ♣</div>
+  <div class="info">
+    <span id="diff-badge" class="diff-badge diff-easy">简单</span>
+     <span id="mode-badge" class="mode-badge">本地多人</span>
+     牌库:<span id="deck-count">40</span> &nbsp;|&nbsp; ⏱<span id="timer">00:00</span>
+     <button id="btn-rules" onclick="showRules()">📖 规则</button>
+     <button id="btn-history" title="对局历史">📜</button>
+     <button id="btn-back" onclick="goToMenu()">← 菜单</button>
+  </div>
+</div>
+
+<!-- 事件公示条 -->
+<div id="toast-container"></div>
+
+<!-- 主区域 -->
+<div id="main-container">
+  <div id="stats-panel" class="hidden"></div>
+  <div id="hint-area" class="hidden"></div>
+  <div id="players-area"></div>
+  <div id="log-panel"></div>
+</div>
+
+<!-- 底部信息条 -->
+<div id="footer-bar"><span class="icon">♠</span> 准备开始游戏...</div>
+
+<!-- 胜利特效层 -->
+<div id="victory-overlay" class="hidden"></div>
+
+<!-- ========== 弹窗层 ========== -->
+
+<!-- 主菜单 -->
+<div id="menu-overlay" class="overlay">
+  <div class="dialog" style="max-width:560px">
+    <div class="logo-section">
+      <div class="logo-main">♠&nbsp;算式<span class="logo-num">21</span>点&nbsp;♣</div>
+      <div class="logo-sub">Equation 21 · The Math Card Game</div>
+    </div>
+    <div class="menu-grid">
+      <div class="menu-card" id="btn-solo">        <span class="icon" style="color:var(--blue)">♠</span>
+        <span class="label">单人练习</span>
+        <span class="desc">自由练习·渐进提示</span>
+      </div>
+      <div class="menu-card" id="btn-local">        <span class="icon" style="color:var(--red)">♥</span>
+        <span class="label">本地多人</span>
+        <span class="desc">2~6人同机对战</span>
+      </div>
+      <div class="menu-card" id="btn-ai">        <span class="icon" style="color:var(--gold)">♦</span>
+        <span class="label">AI对战</span>
+        <span class="desc">挑战不同级别的AI</span>
+      </div>
+      <div class="menu-card locked" id="btn-online">        <span class="icon" style="color:var(--text-dim);opacity:0.5">♣</span>
+        <span class="label">联网对战</span>
+        <span class="tag tag-coming">敬请期待</span>
+        <span class="desc">2~4人在线对战</span>
+      </div>
+    </div>
+    <p style="color:var(--text);font-weight:600;margin-top:10px">选择难度</p>
+    <div class="choice-grid">
+      <div class="choice-card easy-card selected diff-option" data-diff="easy">        <span class="ch-icon" style="color:var(--green)">♠</span>
+        <span class="ch-title">简单</span>
+        <span class="ch-cards">牌面：A ~ 10</span>
+        <span class="ch-ops">运算：+  -  *  /  ( )</span>
+        <span class="ch-for">适合新手入门</span>
+      </div>
+      <div class="choice-card normal-card diff-option" data-diff="normal">        <span class="ch-icon" style="color:var(--gold)">♥</span>
+        <span class="ch-title">普通</span>
+        <span class="ch-cards">牌面：A ~ K</span>
+        <span class="ch-ops">运算：+  -  *  /  ^  √  ( )</span>
+        <span class="ch-for">适合熟练玩家</span>
+      </div>
+      <div class="choice-card hard-card diff-option" data-diff="hard">        <span class="ch-icon" style="color:var(--red)">♦</span>
+        <span class="ch-title">困难</span>
+        <span class="ch-cards">牌面：A ~ K</span>
+        <span class="ch-ops">运算：+  -  *  /  ^  √  !  ( )</span>
+        <span class="ch-for">适合数学高手</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 规则说明弹窗 -->
+<div id="rules-overlay" class="overlay hidden">
+  <div class="dialog" style="max-width:620px;text-align:left">
+    <h2 style="text-align:center">📖 游戏规则</h2>
+
+    <p style="font-weight:700;color:var(--gold);font-size:1.1em">🎯 目标</p>
+    <p>使用手中<strong>所有牌</strong>，通过运算组合使结果<strong>恰好等于 21</strong>！</p>
+
+    <p style="font-weight:700;color:var(--gold);font-size:1.1em;margin-top:12px">🃏 牌面对应数值</p>
+    <table class="rules-table">
+      <tr><th>A</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>J</th><th>Q</th><th>K</th></tr>
+      <tr><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td></tr>
+    </table>
+
+    <p style="font-weight:700;color:var(--gold);font-size:1.1em;margin-top:12px">🔢 难度与运算符</p>
+    <table class="rules-table">
+      <tr><th>难度</th><th>牌面</th><th>可用运算符</th><th>适合</th></tr>
+      <tr><td>🟢 简单</td><td>A~10</td><td>+  -  *  /  ( )</td><td>新手入门</td></tr>
+      <tr><td>🟡 普通</td><td>A~K</td><td>+  -  *  /  ^  √  ( )</td><td>熟练玩家</td></tr>
+      <tr><td>🔴 困难</td><td>A~K</td><td>+  -  *  /  ^  √  !  ( )</td><td>数学高手</td></tr>
+    </table>
+
+    <p style="font-weight:700;color:var(--gold);font-size:1.1em;margin-top:12px">✍️ 表达式示例</p>
+    <div class="rules-example">
+      <p style="color:var(--text-dim)">手牌：<strong>[2, 4, 5, 1]</strong></p>
+      <code class="valid">✓ (5+2)*(4-1) = 7×3 = 21</code>
+      <code class="valid">✓ 5*4+2-1 = 20+1 = 21</code>
+      <code class="invalid">✗ 5+4+2+1 = 12（不等于21）</code>
+      <code class="invalid">✗ 5+4+2 = 11（少用了一张牌！）</code>
+    </div>
+
+    <p style="font-weight:700;color:var(--gold);font-size:1.1em;margin-top:12px">⚠️ 重要规则</p>
+    <ul style="margin-left:20px;color:var(--text);font-size:.88em;line-height:1.8">
+      <li>每张牌<strong>必须且只能</strong>使用一次</li>
+      <li>不能拼接数字（1和2不能拼成12）</li>
+      <li>除法结果可以是小数</li>
+      <li>每局最多<strong>5张牌</strong>，可主动点击"+牌"追加</li>
+      <li>花色不影响游戏（仅装饰）</li>
+      <li>提交不正确可重试，无次数限制</li>
+    </ul>
+
+    <div style="text-align:center;margin-top:14px">
+      <button id="btn-close-rules">知道了！</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI设置弹窗 -->
+<div id="ai-setup-overlay" class="overlay hidden">
+  <div class="dialog">
+    <h2>🤖 AI对战设置</h2>
+    <div class="row"><label>你的名字</label><input type="text" id="ai-player-name" value="玩家" maxlength="10"></div>
+    <p style="color:var(--text);font-weight:600;margin-top:10px">选择对手等级</p>
+    <div class="choice-grid" style="margin-bottom:6px">
+      <div class="choice-card easy-card selected ai-level-option" data-level="easy">        <span class="ch-icon">🐣</span>
+        <span class="ch-title">新手赌徒</span>
+        <span class="ch-cards">入门级对手</span>
+        <span class="ch-for">"还在学算牌"</span>
+      </div>
+      <div class="choice-card normal-card ai-level-option" data-level="medium">        <span class="ch-icon">🦊</span>
+        <span class="ch-title">老练玩家</span>
+        <span class="ch-cards">进阶级对手</span>
+        <span class="ch-for">"数感不错"</span>
+      </div>
+      <div class="choice-card hard-card ai-level-option" data-level="hard">        <span class="ch-icon">🧠</span>
+        <span class="ch-title">数学教授</span>
+        <span class="ch-cards">专家级对手</span>
+        <span class="ch-for">"几乎不会错过"</span>
+      </div>
+    </div>
+    <button id="btn-start-ai">开始对战</button>
+    <button class="secondary" id="btn-ai-back">返回菜单</button>
+  </div>
+</div>
+
+<!-- 本地多人设置弹窗 -->
+<div id="local-setup-overlay" class="overlay hidden">
+  <div class="dialog">
+    <h2>👥 本地多人设置</h2>
+    <div class="row"><label>玩家人数</label><input type="number" id="player-count" value="2" min="2" max="6"></div>
+    <div id="player-name-inputs"></div>
+    <button id="btn-start-local">开始游戏</button>
+    <button class="secondary" id="btn-local-back">返回菜单</button>
+  </div>
+</div>
+
+<!-- 结果弹窗 -->
+<div id="result-overlay" class="overlay hidden">
+  <div class="dialog">
+    <span class="result-icon" id="result-icon">🏆</span>
+    <h2 id="result-title"></h2>
+    <p id="result-detail"></p>
+    <div id="result-score"></div>
+    <div id="result-tags"></div>
+    <button id="btn-again">再来一局</button>
+    <button class="secondary" id="btn-menu">返回菜单</button>
+  </div>
+</div>
+
+<!-- 历史面板（侧边滑出） -->
+<div id="history-panel" class="history-panel hidden">
+  <div class="history-header">
+    <span class="history-title">📜 对局历史</span>
+    <div class="history-header-actions">
+      <button id="btn-history-clear" class="btn-sm" title="清空历史">🗑 清空</button>
+      <span id="history-streak" class="history-streak"></span>
+      <button id="btn-history-close" class="btn-close-panel">✕ 关闭</button>
+    </div>
+  </div>
+  <div class="history-body">
+    <div class="history-stats" id="history-stats"></div>
+    <div class="history-solo-note" id="history-solo-note" style="display:none"></div>
+    <div class="history-best" id="history-best"></div>
+    <div class="history-records" id="history-records"></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/expression.js"></script>
+<script src="js/history.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
