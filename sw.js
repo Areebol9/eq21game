@@ -1,4 +1,4 @@
-const CACHE = 'equation21-v1';
+const CACHE = 'equation21-v2';
 const FILES = [
   './index.html',
   './style.css',

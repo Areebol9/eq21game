@@ -36,6 +36,9 @@ function init() {
   document.getElementById('btn-again').onclick = resetGame;
   document.getElementById('btn-menu').onclick = goToMenu;
 
+  // 音效开关
+  document.getElementById('btn-sound').onclick = toggleSound;
+
   // 历史面板
   document.getElementById('btn-history').onclick = openHistory;
   document.getElementById('btn-history-close').onclick = closeHistory;
@@ -53,6 +56,10 @@ function init() {
       if (!document.getElementById('history-panel').classList.contains('hidden')) closeHistory();
     }
   });
+
+  // 初始化音效偏好
+  game.soundEnabled = localStorage.getItem('eq21_sound') !== 'off';
+  updateSoundButton();
 
   // 关闭预设 AI 倒计时
   stopAiThinking();

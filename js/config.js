@@ -16,7 +16,8 @@ const game = {
   _maxHintShown: false, _firstRender: false,
   currentScore: 0,
   scoreBreakdown: [],
-  gameTags: []
+  gameTags: [],
+  soundEnabled: true
 };
 
 const State = {
@@ -97,13 +98,21 @@ function formatNum(n) { if (typeof n !== 'number' || !isFinite(n)) return String
 
 // ==================== Web Audio 音效 ====================
 let _audioCtx = null;
+let _audioCtxPromise = null;
 function _getAudioCtx() {
-  if (!_audioCtx) { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  if (!_audioCtx) {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    _audioCtxPromise = null;
+  }
+  if (_audioCtx.state === 'suspended' && !_audioCtxPromise) {
+    _audioCtxPromise = _audioCtx.resume();
+  }
   return _audioCtx;
 }
-function soundPlay(type) {
+async function soundPlay(type) {
+  if (!game.soundEnabled) return;
   try {
+    if (_audioCtxPromise) { try { await _audioCtxPromise; } catch (e) { _audioCtxPromise = null; return; } _audioCtxPromise = null; }
     const ctx = _getAudioCtx(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination);
     const now = ctx.currentTime;
     if (type === 'draw') {
@@ -131,6 +140,19 @@ function soundPlay(type) {
       osc.start(now); osc.stop(now + 0.5); osc2.start(now + 0.2); osc2.stop(now + 0.5);
     }
   } catch (e) { /* 静默失败 */ }
+}
+
+// ==================== 音效开关 ====================
+function toggleSound() {
+  game.soundEnabled = !game.soundEnabled;
+  localStorage.setItem('eq21_sound', game.soundEnabled ? 'on' : 'off');
+  updateSoundButton();
+}
+function updateSoundButton() {
+  const btn = document.getElementById('btn-sound');
+  if (btn) {
+    btn.textContent = game.soundEnabled ? '🔊' : '🔇';
+  }
 }
 
 // ==================== 全角符号自动替换 ====================

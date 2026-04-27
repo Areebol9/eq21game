@@ -104,11 +104,16 @@ function renderCardHTML(value, extraClass) {
   const face = cardFace(value), suit = getSuit(value), red = isRedSuit(value);
   const cls = red ? 'suit-color-red' : 'suit-color-black';
   const ec = extraClass ? ' ' + extraClass : '';
-  return '<div class="card-el' + ec + '">' +
-    '<div class="corner top-left ' + cls + '"><span>' + face + '</span><span>' + suit + '</span></div>' +
-    '<div class="center-suit ' + cls + '">' + suit + '</div>' +
-    '<div class="corner bottom-right ' + cls + '"><span>' + face + '</span><span>' + suit + '</span></div>' +
-    '</div>';
+  return '<div class="card-shell' + ec + '">' +
+    '<div class="card-inner">' +
+      '<div class="card-face card-front">' +
+        '<div class="corner top-left ' + cls + '"><span>' + face + '</span><span>' + suit + '</span></div>' +
+        '<div class="center-suit ' + cls + '">' + suit + '</div>' +
+        '<div class="corner bottom-right ' + cls + '"><span>' + face + '</span><span>' + suit + '</span></div>' +
+      '</div>' +
+      '<div class="card-face card-back"></div>' +
+    '</div>' +
+  '</div>';
 }
 
 function renderAll() {
@@ -145,25 +150,53 @@ function renderAll() {
     hdr.appendChild(st); card.appendChild(hdr);
 
     const cr = document.createElement('div'); cr.className = 'cards-row';
-    p.hand.forEach((v, vi) => {
-      let extraCls = '';
-      if (p._newCardIdx === vi) extraCls = 'new-card';
-      else if (isFirst) extraCls = 'animate-in';
-      const d = document.createElement('div');
-      d.innerHTML = renderCardHTML(v, extraCls);
-      const el = d.firstElementChild;
-      if (!(isAi && p.isAi)) {
-        el.style.cursor = 'pointer';
-        el.title = '点击插入 ' + cardFace(v);
-        el.onclick = () => {
-          const inp = card.querySelector('.formula-input');
-          if (inp) insertSymbol(inp, cardFace(v));
-        };
-      }
-      cr.appendChild(el);
-    });
+      p.hand.forEach((v, vi) => {
+        let shellCls = '';
+        const isNew = (p._newCardIdx === vi);
+        if (isNew) {
+          shellCls = 'is-face-down is-hit-deal hit-card';
+        } else if (isFirst) {
+          shellCls = 'is-face-down';
+        } else {
+          shellCls = 'is-face-up';
+        }
+        const d = document.createElement('div');
+        d.innerHTML = renderCardHTML(v, shellCls);
+        const el = d.firstElementChild;
+
+        if (!(isAi && p.isAi)) {
+          el.style.cursor = 'pointer';
+          el.title = '点击插入 ' + cardFace(v);
+          el.onclick = () => {
+            const inp = card.querySelector('.formula-input');
+            if (inp) insertSymbol(inp, cardFace(v));
+          };
+        }
+        cr.appendChild(el);
+
+        if (isFirst) {
+          const cardEl = el;
+          const delay = 80 + vi * 120;
+          setTimeout(() => {
+            cardEl.classList.remove('is-face-down');
+            cardEl.classList.add('is-face-up');
+          }, delay);
+        }
+        if (isNew) {
+          const cardEl = el;
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              cardEl.classList.remove('is-face-down');
+              cardEl.classList.add('is-face-up');
+            }, 260);
+          });
+          setTimeout(() => {
+            cardEl.classList.remove('is-hit-deal');
+          }, 560);
+        }
+      });
     if (p._newCardIdx !== undefined) {
-      setTimeout(() => { p._newCardIdx = undefined; }, 500);
+      setTimeout(() => { p._newCardIdx = undefined; }, 200);
     }
     card.appendChild(cr);
 

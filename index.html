@@ -8,18 +8,26 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="./manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><defs><radialGradient id=%22bg%22 cx=%2250%25%22 cy=%2235%25%22><stop offset=%220%25%22 stop-color=%22%231a3525%22/><stop offset=%22100%25%22 stop-color=%22%2306100a%22/></radialGradient></defs><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22url(%23bg)%22 stroke=%22%23c9a96e%22 stroke-width=%222.5%22 stroke-opacity=%220.5%22/><text x=%2250%22 y=%2267%22 text-anchor=%22middle%22 font-family=%22Georgia,serif%22 font-weight=%22700%22 font-size=%2248%22 letter-spacing=%221%22 fill=%22%23d8b76a%22>21</text></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- 顶部栏 -->
 <div id="header-bar">
-  <div class="title" onclick="goToMenu()" title="返回主菜单">♠ 算式<span class="num-21">21</span>点 ♣</div>
+  <div class="title" onclick="goToMenu()" title="返回主菜单">
+    <span class="header-suit">♠</span>
+    <span class="header-cn">算式</span>
+    <span class="header-num">21</span>
+    <span class="header-cn">点</span>
+    <span class="header-suit">♣</span>
+  </div>
   <div class="info">
     <span id="diff-badge" class="diff-badge diff-easy">简单</span>
      <span id="mode-badge" class="mode-badge">本地多人</span>
      牌库:<span id="deck-count">40</span> &nbsp;|&nbsp; ⏱<span id="timer">00:00</span>
      <button id="btn-rules" onclick="showRules()">📖 规则</button>
+     <button id="btn-sound" title="音效开关">🔊</button>
      <button id="btn-history" title="对局历史">📜</button>
      <button id="btn-back" onclick="goToMenu()">← 菜单</button>
   </div>
@@ -48,7 +56,13 @@
 <div id="menu-overlay" class="overlay">
   <div class="dialog" style="max-width:560px">
     <div class="logo-section">
-      <div class="logo-main">♠&nbsp;算式<span class="logo-num">21</span>点&nbsp;♣</div>
+      <div class="logo-main">
+        <span class="title-suit">♠</span>
+        <span class="title-cn">算式</span>
+        <span class="title-num">21</span>
+        <span class="title-cn">点</span>
+        <span class="title-suit">♣</span>
+      </div>
       <div class="logo-sub">Equation 21 · The Math Card Game</div>
     </div>
     <div class="menu-grid">
@@ -90,6 +104,11 @@
         <span class="ch-ops">运算：+  -  *  /  ^  √  !  ( )</span>
         <span class="ch-for">适合数学高手</span>
       </div>
+    </div>
+    <div class="menu-footer">
+      <button class="btn-menu-secondary" onclick="openHistory()">对局历史</button>
+      <span class="menu-footer-divider">|</span>
+      <button class="btn-menu-secondary" onclick="showRules()">游戏规则</button>
     </div>
   </div>
 </div>

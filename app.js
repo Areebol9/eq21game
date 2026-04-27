@@ -51,14 +51,15 @@ function cardFace(v) { if(v===1)return'A';if(v===11)return'J';if(v===12)return'Q
 function formatNum(n){ if(typeof n!=='number'||!isFinite(n)) return String(n); return Number.isInteger(n)?n.toString():n.toFixed(6).replace(/0+$/,'').replace(/\.$/,'') }
 
 // ==================== Web Audio 音效 ====================
-let _audioCtx=null;
+let _audioCtx=null;let _audioCtxPromise=null;
 function _getAudioCtx(){
-  if(!_audioCtx){_audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
-  if(_audioCtx.state==='suspended') _audioCtx.resume();
+  if(!_audioCtx){_audioCtx=new(window.AudioContext||window.webkitAudioContext)();_audioCtxPromise=null}
+  if(_audioCtx.state==='suspended'&&!_audioCtxPromise){_audioCtxPromise=_audioCtx.resume()}
   return _audioCtx;
 }
-function soundPlay(type){
-  try{const ctx=_getAudioCtx();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);
+async function soundPlay(type){
+  try{if(_audioCtxPromise){try{await _audioCtxPromise}catch(e){_audioCtxPromise=null;return}_audioCtxPromise=null}
+    const ctx=_getAudioCtx();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.connect(gain);gain.connect(ctx.destination);
     const now=ctx.currentTime;
     if(type==='draw'){
       osc.type='sine';osc.frequency.setValueAtTime(520,now);osc.frequency.linearRampToValueAtTime(780,now+0.12);
