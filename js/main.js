@@ -20,10 +20,17 @@ function init() {
     btn.onclick = () => selectDifficulty(btn.dataset.diff, btn);
   });
 
-  // 本地多人人数 + 名字
-  document.getElementById('player-count').onchange = updateNameInputs;
-  document.getElementById('btn-start-local').onclick = startLocalGame;
-  document.getElementById('btn-local-back').onclick = goToMenu;
+  // 围桌模式
+  document.getElementById('btn-start-table').onclick = startLocalGame;
+  document.getElementById('btn-table-back').onclick = goToMenu;
+  // 人数选择卡片
+  document.querySelectorAll('.table-opt').forEach(c => {
+    c.onclick = () => {
+      document.querySelectorAll('.table-opt').forEach(x => x.classList.remove('selected'));
+      c.classList.add('selected');
+      updateTableNameInputs();
+    };
+  });
 
   // AI 对战
   document.querySelectorAll('.ai-level-option').forEach(btn => {

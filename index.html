@@ -41,6 +41,12 @@
   <div id="stats-panel" class="hidden"></div>
   <div id="hint-area" class="hidden"></div>
   <div id="players-area"></div>
+  <div id="tabletop-center" class="hidden">
+    <div class="tc-stat"><div class="tc-val" id="tc-timer">00:00</div><div class="tc-label">用时</div></div>
+    <div class="tc-stat"><div class="tc-val" id="tc-deck">40</div><div class="tc-label">牌库</div></div>
+    <div class="tc-stat"><div class="tc-val" style="color:var(--gold)">21</div><div class="tc-label">目标</div></div>
+    <div class="tc-event" id="tc-event"></div>
+  </div>
   <div id="log-panel"></div>
 </div>
 
@@ -71,8 +77,8 @@
         <span class="desc">自由练习·渐进提示</span>
       </div>
       <div class="menu-card" id="btn-local">        <span class="icon" style="color:var(--red)">♥</span>
-        <span class="label">本地多人</span>
-        <span class="desc">2~6人同机对战</span>
+        <span class="label">围桌模式</span>
+        <span class="desc">一台设备，多人同桌</span>
       </div>
       <div class="menu-card" id="btn-ai">        <span class="icon" style="color:var(--gold)">♦</span>
         <span class="label">AI对战</span>
@@ -188,14 +194,31 @@
   </div>
 </div>
 
-<!-- 本地多人设置弹窗 -->
-<div id="local-setup-overlay" class="overlay hidden">
+<!-- 围桌模式设置弹窗 -->
+<div id="table-setup-overlay" class="overlay hidden">
   <div class="dialog">
-    <h2>👥 本地多人设置</h2>
-    <div class="row"><label>玩家人数</label><input type="number" id="player-count" value="2" min="2" max="6"></div>
-    <div id="player-name-inputs"></div>
-    <button id="btn-start-local">开始游戏</button>
-    <button class="secondary" id="btn-local-back">返回菜单</button>
+    <h2>🃏 围桌模式</h2>
+    <p style="color:var(--text);font-weight:600;margin-top:10px">选择人数布局</p>
+    <div class="choice-grid">
+      <div class="choice-card selected table-opt" data-players="2">
+        <span class="ch-icon">⚔️</span>
+        <span class="ch-title">双人对弈</span>
+        <span class="ch-cards">面对面决胜</span>
+      </div>
+      <div class="choice-card table-opt" data-players="3">
+        <span class="ch-icon">▲</span>
+        <span class="ch-title">三足鼎立</span>
+        <span class="ch-cards">三角对峙</span>
+      </div>
+      <div class="choice-card table-opt" data-players="4">
+        <span class="ch-icon">◆</span>
+        <span class="ch-title">四方会战</span>
+        <span class="ch-cards">围桌四方</span>
+      </div>
+    </div>
+    <div id="table-name-inputs"></div>
+    <button id="btn-start-table">开始对局</button>
+    <button class="secondary" id="btn-table-back">返回菜单</button>
   </div>
 </div>
 

@@ -40,9 +40,8 @@ function updateFooterBar() {
     } else {
       fb.innerHTML = '<span class="icon">♠</span> 快！尽快算出' + game.target + '！ | 你的手牌' + human.hand.length + '张';
     }
-  } else {
-    const activeCnt = game.players.filter(p => !p.conceded).length;
-    fb.innerHTML = '<span class="icon">♠</span> ' + activeCnt + '位玩家在比赛中...';
+  } else if (game.mode === 'local') {
+    fb.innerHTML = '<span class="icon">♥</span> 围桌中 · ' + game.players.filter(p => !p.conceded).length + '人对弈 · 牌库' + game.deck.length + ' · 🎯' + game.target;
   }
 }
 
@@ -94,7 +93,7 @@ function setFeedback(idx, msg, type) {
 }
 function shakeCard(idx) {
   const c = document.querySelector('.player-card[data-index="' + idx + '"]');
-  if (c) { c.classList.add('error-shake'); setTimeout(() => c.classList.remove('error-shake'), 400); }
+  if (c) { const h = c.querySelector('.player-header'); if (h) { h.classList.add('error-shake'); setTimeout(() => h.classList.remove('error-shake'), 400); } }
 }
 
 // ==================== 渲染 ====================
@@ -117,6 +116,10 @@ function renderCardHTML(value, extraClass) {
 }
 
 function renderAll() {
+  if (game.mode === 'local' && game.players.length >= 2) {
+    renderTabletop();
+    return;
+  }
   const area = document.getElementById('players-area'); area.innerHTML = '';
   const isSolo = game.mode === 'solo';
   const isAi = game.mode === 'ai';
@@ -203,7 +206,7 @@ function renderAll() {
     const act = document.createElement('div'); act.className = 'player-actions';
     const input = document.createElement('input');
     input.type = 'text'; input.className = 'formula-input';
-    input.placeholder = '输入算式，如 (A+7)*K';
+    input.placeholder = '组合算式 = 21';
     input.value = p.inputDraft || '';
     input.disabled = (game.phase !== 'playing' || p.conceded || (isAi && p.isAi));
     input.addEventListener('input', () => { p.inputDraft = input.value; });
@@ -289,6 +292,174 @@ function renderAll() {
 
   if (!isSolo) document.getElementById('hint-area').classList.add('hidden');
   if (game._firstRender) State.set('_firstRender', false);
+}
+
+// ==================== 围桌模式渲染 ====================
+function renderTabletop() {
+  const count = game.players.length;
+  const area = document.getElementById('players-area');
+  const center = document.getElementById('tabletop-center');
+
+  area.innerHTML = '';
+  area.classList.add('tabletop-' + count + 'p');
+
+  if (center) {
+    area.appendChild(center);
+    center.classList.remove('hidden');
+    center.style.gridRow = '2';
+    center.style.gridColumn = count >= 3 ? '1 / 3' : '1';
+  }
+
+  const isFirst = game._firstRender;
+
+  // 玩家位置配置: { row, col, rotate }
+  const posConfigs = {
+    2: [{ row: 3, col: '1', rotate: false }, { row: 1, col: '1', rotate: true }],
+    3: [{ row: 3, col: '1 / 3', rotate: false }, { row: 1, col: '1', rotate: true }, { row: 1, col: '2', rotate: true }],
+    4: [{ row: 3, col: '1', rotate: false }, { row: 1, col: '1', rotate: true }, { row: 1, col: '2', rotate: true }, { row: 3, col: '2', rotate: false }]
+  };
+  const positions = posConfigs[count] || posConfigs[2];
+
+  game.players.forEach((p, i) => {
+    const pos = positions[i];
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    if (p.conceded) card.classList.add('conceded');
+    if (game.phase === 'ended' && p.feedbackType === 'ok') card.classList.add('winner');
+    card.setAttribute('data-index', i);
+    card.style.gridRow = pos.row;
+    card.style.gridColumn = pos.col;
+
+    if (pos.rotate) {
+      card.className += ' player-top';
+      card.style.transform = 'rotate(180deg)';
+    } else {
+      card.className += ' player-bottom';
+    }
+
+    const hdr = document.createElement('div'); hdr.className = 'player-header';
+    const dot = document.createElement('span'); dot.className = 'dot';
+    dot.style.backgroundColor = PLR_COLORS[i % PLR_COLORS.length];
+    hdr.appendChild(dot);
+    hdr.appendChild(document.createTextNode(p.name));
+    const st = document.createElement('span'); st.className = 'player-status';
+    if (game.phase === 'ended' && p.feedbackType === 'ok') { st.textContent = '🏆 获胜'; st.className += ' won'; }
+    else if (p.conceded) { st.textContent = '认输'; st.className += ' lost'; }
+    else { st.textContent = '手牌' + p.hand.length + '张'; }
+    hdr.appendChild(st); card.appendChild(hdr);
+
+    const cr = document.createElement('div'); cr.className = 'cards-row';
+    p.hand.forEach((v, vi) => {
+      const isNew = (p._newCardIdx === vi);
+      let cls = 'is-face-up';
+      if (isNew) cls = 'is-face-down is-hit-deal hit-card';
+      else if (isFirst) cls = 'is-face-down';
+      const d = document.createElement('div');
+      d.innerHTML = renderCardHTML(v, cls);
+      const el = d.firstElementChild;
+      el.style.cursor = 'pointer';
+      el.title = '点击插入 ' + cardFace(v);
+      el.onclick = () => tableAppendExpr(i, cardFace(v));
+      cr.appendChild(el);
+
+      if (isFirst) {
+        const delay = 80 + vi * 120;
+        setTimeout(() => { el.classList.remove('is-face-down'); el.classList.add('is-face-up'); }, delay);
+      }
+      if (isNew) {
+        requestAnimationFrame(() => {
+          setTimeout(() => { el.classList.remove('is-face-down'); el.classList.add('is-face-up'); }, 260);
+        });
+        setTimeout(() => el.classList.remove('is-hit-deal'), 560);
+      }
+    });
+    if (p._newCardIdx !== undefined) { setTimeout(() => { p._newCardIdx = undefined; }, 200); }
+    card.appendChild(cr);
+
+    const display = document.createElement('div');
+    display.className = 'expr-display';
+    display.textContent = p.inputDraft || '';
+    card.appendChild(display);
+
+    const act = document.createElement('div'); act.className = 'player-actions';
+    const btnSub = document.createElement('button');
+    btnSub.className = 'btn-submit'; btnSub.textContent = '提交';
+    btnSub.disabled = (game.phase !== 'playing' || p.conceded);
+    btnSub.onclick = () => submitFormula(i);
+    act.appendChild(btnSub);
+
+    const btnDraw = document.createElement('button');
+    btnDraw.className = 'btn-draw'; btnDraw.textContent = '+牌';
+    btnDraw.disabled = (game.phase !== 'playing' || p.conceded || p.hand.length >= game.maxCards);
+    btnDraw.onclick = () => drawForPlayer(i);
+    act.appendChild(btnDraw);
+
+    const btnConc = document.createElement('button');
+    btnConc.className = 'btn-concede'; btnConc.textContent = '认输';
+    btnConc.disabled = (game.phase !== 'playing' || p.conceded);
+    btnConc.onclick = () => concedePlayer(i);
+    act.appendChild(btnConc);
+    card.appendChild(act);
+
+    const symBar = document.createElement('div'); symBar.className = 'symbol-bar';
+    if (game.phase === 'playing' && !p.conceded) {
+      const syms = ['(', ')', '+', '-', '*', '/'];
+      if (game.difficulty !== 'easy') syms.push('^', '√');
+      if (game.difficulty === 'hard') syms.push('!');
+      syms.push('⌫');
+      syms.forEach(s => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'symbol-btn';
+        if (s === '⌫') { btn.classList.add('backspace'); btn.textContent = '⌫'; }
+        else { btn.textContent = s; }
+        if (s === '√') btn.textContent = '√';
+        btn.onclick = (e) => { e.preventDefault(); tableAppendExpr(i, s); };
+        symBar.appendChild(btn);
+      });
+    } else { symBar.classList.add('placeholder'); }
+    card.appendChild(symBar);
+
+    const fb = document.createElement('div');
+    fb.className = 'feedback ' + (p.feedbackType || '');
+    fb.textContent = p.feedback || '';
+    card.appendChild(fb);
+
+    area.appendChild(card);
+  });
+
+  updateTabletopCenter();
+  updateDeckCount();
+  if (game._firstRender) State.set('_firstRender', false);
+}
+
+function tableAppendExpr(idx, symbol) {
+  const p = game.players[idx];
+  if (!p || p.conceded || game.phase !== 'playing') return;
+  if (symbol === '⌫') {
+    p.inputDraft = p.inputDraft.slice(0, -1);
+  } else {
+    p.inputDraft += symbol;
+  }
+  updateExprDisplay(idx);
+}
+
+function updateExprDisplay(idx) {
+  const card = document.querySelector('.player-card[data-index="' + idx + '"]');
+  if (card) {
+    const display = card.querySelector('.expr-display');
+    if (display) display.textContent = game.players[idx].inputDraft || '';
+  }
+}
+
+function updateTabletopCenter() {
+  const timer = document.getElementById('tc-timer');
+  const deck = document.getElementById('tc-deck');
+  if (timer) {
+    const m = Math.floor(game.timerSec / 60), s = game.timerSec % 60;
+    timer.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  if (deck) deck.textContent = game.deck.length;
 }
 
 // ==================== 输入辅助 ====================

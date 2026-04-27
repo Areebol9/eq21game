@@ -7,6 +7,29 @@
 
 ---
 
+## [v3.3] — 2026-04-28
+
+### 新增
+- 🃏 **围桌模式**：本地多人全面改造
+  - 双人对坐布局（上方玩家 180° 旋转 + 中央信息栏 `#tabletop-center`）
+  - 3/4 人布局选项（可用，但未完美）
+  - 点击牌面 + 符号按钮构建算式，无需键盘输入（`.expr-display` 替代 `<input>`）
+- 🌐 **PWA 支持**：`manifest.json` + `sw.js`（Cache-First），可添加到手机桌面离线玩
+- 🔔 **音效开关**：头部栏 `#btn-sound` 一键切换，`localStorage` 持久化偏好
+- 🃏 **牌背 3D 翻转动画**：`card-shell` / `card-inner` / `rotateY` / `backface-visibility` 系统，发牌入场动画、加牌快翻动画、hover 上浮效果
+
+### 优化
+- 🎨 UI 美化：菜单卡片 hover 阴影加深、难度卡渐变和纹理、`.menu-footer` 历史/规则链接
+- 🏷 Logo 字体拆分：♠算式21点♣ 中数字 `21` 用独立 `Playfair Display` 衬线字体
+- 📱 移动端：符号按钮放大、3/4 人围桌横屏提示、手机竖屏降级围桌布局
+
+### 架构
+- `State.get/set/reset` 状态管理规范化（`config.js`）
+- `OPERATORS` 运算符注册表（`config.js`：7 个运算符统一配置）
+- AI 求解器补全 `√` 和 `!` 一元搜索分支
+
+---
+
 ## [v3.2.1] — 2026-04-27
 
 ### 修复

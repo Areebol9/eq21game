@@ -17,7 +17,7 @@ game = {
   difficulty: 'easy' | 'normal' | 'hard',
   deck: [...],
   faceIcons: {...},
-  players: [{ name, isAi, hand, gaveUp }],
+  players: [{ name, isAi, hand, conceded, feedback, feedbackType, inputDraft }],
   currentPlayerIndex: 0,
   aiPlayerIndex: null,
   aiLevel: 'easy' | 'medium' | 'hard',
@@ -122,10 +122,12 @@ game = {
 
 | 决策 | 理由 | 代价 |
 |------|------|------|
-| 单文件结构（已拆分为 5 文件） | 分发方便，零构建 | 全局作用域，命名冲突风险 |
+| 单文件结构（已拆分为 6 文件 + PWA） | 分发方便，零构建 | 全局作用域，命名冲突风险 |
 | 全局 `game` 对象 | 简单直观 | 状态追踪困难 |
 | 自研表达式解析器 | 避免 `eval()` 安全风险 | 维护成本较高 |
 | 纯浏览器端运行 | 零环境依赖 | 持久化仅限 localStorage |
+| PWA 离线支持 | 可添加到手机桌面，离线游玩 | 需维护 sw.js 缓存策略 |
+| 围桌模式双轨渲染 | `renderAll()` 分支：solo/AI → 通用，local → `renderTabletop2P()` | 两种渲染路径需保持功能一致 |
 | CSS Grid/Flexbox | 现代响应式布局 | 不支持 IE |
 
 ---
@@ -135,11 +137,11 @@ game = {
 | 优先级 | 项目 | 理由 |
 |--------|------|------|
 | ~~🔴 P0~~ | ~~给表达式求值器写单元测试~~ | ✅ **已完成** — `tests/test-expression.js` + `tests/test-fuzz.js` |
-| 🔴 P0 | 规范化状态管理 | 减少 Bug 风险，便于扩展 |
-| 🟡 P1 | 运算符配置表化 | 降低新增运算符成本 |
+| ~~🔴 P0~~ | ~~规范化状态管理~~ | ✅ **已完成** — `State.get/set/reset` 入口函数 + 40+ 处替换（`config.js`） |
+| ~~🟡 P1~~ | ~~运算符配置表化~~ | ✅ **已完成** — `OPERATORS` 注册表 7 运算符（`config.js`） |
 | 🟡 P1 | AI 搜索加剪枝 / Web Worker | 避免 5 张牌时 UI 卡顿 |
-| 🟢 P2 | 引入构建工具（Vite） | 仅在需要发布生产版本时必要 |
-| 🟢 P2 | 引入 TypeScript | 类型安全，但增加构建步骤 |
+| ~~🟢 P2~~ | ~~引入构建工具（Vite）~~ | ~~仅在需要发布生产版本时必要~~ |
+| ~~🟢 P2~~ | ~~引入 TypeScript~~ | ~~类型安全，但增加构建步骤~~ |
 
 ---
 
@@ -166,7 +168,7 @@ const OPERATORS = {
 ```javascript
 const GAME_MODES = {
   solo:  { setupOverlay: '#solo-setup',  startFn: startSoloGame,  ... },
-  local: { setupOverlay: '#local-setup', startFn: startLocalGame, ... },
+  local: { setupOverlay: '#table-setup-overlay', startFn: startLocalGame, ... },  // 围桌模式
   ai:    { setupOverlay: '#ai-setup',    startFn: startAIGame,    ... },
 };
 ```
@@ -177,7 +179,7 @@ const GAME_MODES = {
 
 ### 模块位置
 
-`js/history.js` — 独立于游戏逻辑，仅依赖 `config.js` 和 `ui.js`。
+`js/history.js` — 独立于游戏逻辑，仅依赖 `config.js`。
 
 ### 评分公式
 

@@ -2,7 +2,7 @@
 // ==================== 计时器 ====================
 function startTimer() {
   State.set('timerSec', 0); updateTimerUI(); stopTimer();
-  State.set('timerInterval', setInterval(() => { game.timerSec++; updateTimerUI(); updateFooterBar(); updateSolutionHint(); }, 1000));
+  State.set('timerInterval', setInterval(() => { game.timerSec++; updateTimerUI(); updateFooterBar(); updateSolutionHint(); updateTabletopCenter(); }, 1000));
 }
 function stopTimer() {
   if (game.timerInterval) { clearInterval(game.timerInterval); State.set('timerInterval', null); }
@@ -377,14 +377,17 @@ function goToMenu() {
   State.set('_firstRender', false); State.set('_solving', false); _lastCheckedHand = '';
   State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
   updateTimerUI(); updateDeckCount();
+  const tc = document.getElementById('tabletop-center');
   document.getElementById('players-area').innerHTML = '';
+  document.getElementById('players-area').classList.remove('tabletop-2p', 'tabletop-3p', 'tabletop-4p');
+  if (tc) { document.getElementById('main-container').appendChild(tc); tc.classList.add('hidden'); }
   document.getElementById('log-panel').innerHTML = '';
   document.getElementById('footer-bar').innerHTML = '<span class="icon">♠</span> 准备开始游戏...';
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   document.getElementById('menu-overlay').classList.remove('hidden');
   document.getElementById('ai-setup-overlay').classList.add('hidden');
-  document.getElementById('local-setup-overlay').classList.add('hidden');
+  document.getElementById('table-setup-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
   document.getElementById('rules-overlay').classList.add('hidden');
   updateModeBadge('');
@@ -395,9 +398,9 @@ function startMode(mode) {
   if (mode === 'solo') {
     State.set('mode', 'solo'); updateModeBadge('单人练习'); startSoloGame();
   } else if (mode === 'local') {
-    State.set('mode', 'local'); updateModeBadge('本地多人');
-    document.getElementById('local-setup-overlay').classList.remove('hidden');
-    updateNameInputs();
+    State.set('mode', 'local'); updateModeBadge('围桌模式');
+    document.getElementById('table-setup-overlay').classList.remove('hidden');
+    document.querySelectorAll('.table-opt').forEach(c => c.classList.remove('selected'));
   } else if (mode === 'ai') {
     State.set('mode', 'ai'); updateModeBadge('AI对战');
     document.getElementById('ai-setup-overlay').classList.remove('hidden');
@@ -410,13 +413,27 @@ function updateModeBadge(text) {
   else b.style.display = 'none';
 }
 
-function updateNameInputs() {
-  const count = parseInt(document.getElementById('player-count').value) || 2;
-  const c = document.getElementById('player-name-inputs'); c.innerHTML = '';
+function updateTableNameInputs() {
+  const selected = document.querySelector('.table-opt.selected');
+  const count = selected ? parseInt(selected.dataset.players) : 2;
+  const container = document.getElementById('table-name-inputs');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const seatLabels = {
+    2: ['主位', '对家'],
+    3: ['主位', '左席', '右席'],
+    4: ['主位', '左席', '对家', '右席']
+  };
+  const labels = seatLabels[count] || [];
+
   for (let i = 0; i < count; i++) {
-    const r = document.createElement('div'); r.className = 'row';
-    r.innerHTML = '<label>玩家' + (i + 1) + '</label><input type="text" id="pname-' + i + '" value="玩家' + (i + 1) + '" maxlength="10">';
-    c.appendChild(r);
+    const r = document.createElement('div');
+    r.className = 'row';
+    const label = labels[i] || ('玩家' + (i + 1));
+    r.innerHTML = '<label>玩家' + (i + 1) + '（' + label + '）</label>' +
+      '<input type="text" id="pname-' + i + '" value="玩家' + (i + 1) + '" maxlength="6">';
+    container.appendChild(r);
   }
 }
 
@@ -453,8 +470,8 @@ function startSoloGame() {
 }
 
 function startLocalGame() {
-  const count = parseInt(document.getElementById('player-count').value) || 2;
-  if (count < 2 || count > 6) { alert('玩家人数请设为2~6人'); return; }
+  const selected = document.querySelector('.table-opt.selected');
+  const count = selected ? parseInt(selected.dataset.players) : 2;
   const names = [];
   for (let i = 0; i < count; i++) {
     const inp = document.getElementById('pname-' + i);
@@ -462,12 +479,13 @@ function startLocalGame() {
   }
   initPlayers(names, Array(count).fill(false));
   dealCards();
-  State.set('phase', 'playing'); State.set('stats', { submits: 0, hintsUsed: 0, maxHints: 3, draws: 0 });
+  State.set('phase', 'playing'); State.set('stats', { submits: 0, hintsUsed: 0, maxHints: 0, draws: 0 });
   State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
   updateDeckCount(); startTimer();
-  document.getElementById('local-setup-overlay').classList.add('hidden');
+  document.getElementById('table-setup-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
-  addLog('👥 本地多人开始！每人3张牌，谁先用算式算出' + game.target + '谁获胜！', 'info');
+  const playerLabels = { 2: '双人对坐', 3: '三人围桌', 4: '四方会战' };
+  addLog('🃏 围桌对战开始！' + (playerLabels[count] || '') + '，谁先用算式算出' + game.target + '谁获胜！', 'info');
   renderAll(); updateFooterBar();
 }
 
@@ -541,14 +559,16 @@ function resetGame() {
   State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
   updateTimerUI(); updateDeckCount();
   document.getElementById('result-overlay').classList.add('hidden');
+  const tc2 = document.getElementById('tabletop-center');
   document.getElementById('players-area').innerHTML = '';
+  document.getElementById('players-area').classList.remove('tabletop-2p', 'tabletop-3p', 'tabletop-4p');
+  if (tc2) { document.getElementById('main-container').appendChild(tc2); tc2.classList.add('hidden'); }
   document.getElementById('log-panel').innerHTML = '';
   document.getElementById('footer-bar').innerHTML = '<span class="icon">♠</span> 准备开始游戏...';
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   if (game.mode === 'local') {
-    document.getElementById('local-setup-overlay').classList.remove('hidden');
-    updateNameInputs();
+    document.getElementById('table-setup-overlay').classList.remove('hidden');
   } else if (game.mode === 'ai') {
     document.getElementById('ai-setup-overlay').classList.remove('hidden');
   } else if (game.mode === 'solo') {
