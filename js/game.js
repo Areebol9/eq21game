@@ -308,7 +308,7 @@ function scheduleAiThink() {
         const st = card.querySelector('.player-status');
         if (st && game.aiThinking) st.textContent = '🤖 思考中... ' + Math.max(0, game.aiCountdown) + 's';
       }
-    }, 1000);
+    }, 1000));
 
     State.set('aiTimerId', setTimeout(() => {
       clearInterval(game.aiCountdownInterval);
@@ -347,7 +347,7 @@ function scheduleAiThink() {
         }
         renderAll(); updateFooterBar();
       }
-    }, delay);
+    }, delay));
   }, 30);
 }
 
