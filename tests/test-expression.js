@@ -94,6 +94,15 @@ function assertThrows(desc, fn, expectedMsg) {
 }
 
 // ==================== 加载游戏源码 ====================
+function assertSolutionsPlayable(desc, m, solutions, hand, target = 21) {
+  for (const solution of solutions) {
+    const expr = typeof solution === "string" ? solution : solution.expr;
+    assert(`${desc}: ${expr} evaluates to target`, Math.abs(m.evaluate(expr) - target) < 0.000001, true);
+    const handValidation = m.validateHand(expr, hand);
+    assert(`${desc}: ${expr} passes validateHand`, handValidation.valid, true);
+  }
+}
+
 function loadGameModules(difficulty) {
   const sandbox = {
     game: {
@@ -167,6 +176,8 @@ function loadGameModules(difficulty) {
     extractNumbers: ctx.extractNumbers,
     validateHand: ctx.validateHand,
     aiSolve: ctx.aiSolve,
+    solveHandDetailed: ctx.solveHandDetailed,
+    rateSolution: ctx.rateSolution,
     getBinaryOps: ctx.getBinaryOps,
     hasUnary: ctx.hasUnary,
     hasFactorial: ctx.hasFactorial,
@@ -174,6 +185,7 @@ function loadGameModules(difficulty) {
     cardFace: ctx.cardFace,
     createDeck: ctx.createDeck,
     shuffle: ctx.shuffle,
+    setDifficulty: (nextDifficulty) => vm.runInContext(`game.difficulty = "${nextDifficulty}";`, ctx),
   };
 }
 
@@ -585,12 +597,46 @@ section("aiSolve: 一元运算符 ! (hard)");
   assert("aiSolve([3,3,3,3],21) 有解 (利用 3!=6)", results.length > 0, true);
 }
 
+section("aiSolve: 普通/困难缓存隔离");
+
+{
+  const m = loadGameModules("hard");
+  const hardResults = m.aiSolve([3, 3, 3, 3], 21, m.getBinaryOps());
+  assert("hard: 结果可包含阶乘", hardResults.some(expr => expr.includes("!")), true);
+  m.setDifficulty("normal");
+  const normalResults = m.aiSolve([3, 3, 3, 3], 21, m.getBinaryOps());
+  assert("normal: 缓存切换后仍有普通模式解", normalResults.length > 0, true);
+  assert("normal: 不复用 hard 的阶乘解", normalResults.some(expr => expr.includes("!")), false);
+}
+
 section("aiSolve: 一元运算符不导致无限递归");
 
 {
   const m = loadGameModules("hard");
   const results = m.aiSolve([5, 5, 5, 5], 24, ["+", "-", "*", "/", "^"]);
   assert("aiSolve([5,5,5,5],24) 正常返回", Array.isArray(results), true);
+}
+
+section("aiSolve: time budget safety");
+
+{
+  const m = loadGameModules("normal");
+  const start = Date.now();
+  const results = m.aiSolve([1, 6, 13, 13, 8], 21, m.getBinaryOps(), { maxMs: 1 });
+  const elapsed = Date.now() - start;
+  assert("budgeted 5-card solve returns an array", Array.isArray(results), true);
+  assert("budgeted 5-card solve times out", results.timedOut, true);
+  assert("budgeted 5-card solve returns quickly", elapsed < 1000, true);
+}
+
+{
+  const m = loadGameModules("easy");
+  const timedOut = m.aiSolve([1], 1, m.getBinaryOps(), { maxMs: 0 });
+  assert("immediate timeout is marked", timedOut.timedOut, true);
+  assert("immediate timeout does not return partial target", timedOut.length, 0);
+  const complete = m.aiSolve([1], 1, m.getBinaryOps());
+  assert("timeout result does not pollute cache", complete.length > 0, true);
+  assert("complete cached result is not timed out", complete.timedOut, false);
 }
 
 // ---------- tokenize 单元测试 ----------
@@ -662,10 +708,116 @@ section("综合: 真实对局场景");
 }
 
 {
+  const m = loadGameModules("hard");
+  assert("evaluate: A! = 1 in hard", m.evaluate("A!"), 1);
+  assert("evaluate: ((7*√(9))^A!) = 21", m.evaluate("((7*√(9))^A!)"), 21);
+  const v = m.validateHand("((7*√(9))^A!)", [7, 9, 1]);
+  assert("validateHand: cool hint with A! passes", v.valid, true);
+}
+
+{
+  const m = loadGameModules("normal");
+  assertThrows("evaluate: A! unavailable in normal", () => m.evaluate("A!"), /阶乘仅在困难模式可用/);
+}
+
+{
   // 场景: 手牌 [4,6,K] → [4,6,13], 13+6+4=23 ≠ 21
   const m = loadGameModules("hard");
   const result = m.evaluate("K+6+4");
   assert("K+6+4=23", result, 23);
+}
+
+section("aiSolve: 5张牌 6332J 必须在300ms内找到解 (二元优先剪枝)");
+
+{
+  const m = loadGameModules("normal");
+  const start = Date.now();
+  const results = m.aiSolve([6, 3, 3, 2, 11], 21, m.getBinaryOps(), { maxMs: 300 });
+  const elapsed = Date.now() - start;
+  assert("6332J finds solution", results.length > 0, true);
+  assert("6332J not timed out", results.timedOut, false);
+  assert("6332J solves within 300ms", elapsed <= 350, true);
+
+  const sol = results[0];
+  assert("6332J solution evaluates to 21", Math.abs(m.evaluate(sol) - 21) < 0.001, true);
+  const v = m.validateHand(sol, [6, 3, 3, 2, 11]);
+  assert("6332J solution passes validateHand", v.valid, true);
+}
+
+section("solveHandDetailed: simple/cool 双档输出");
+
+{
+  const m = loadGameModules("normal");
+  const detailed = m.solveHandDetailed([6, 3, 3, 2, 11], 21, m.getBinaryOps(), { maxMs: 600 });
+  assert("6332J detailed has simple solution", detailed.simpleSolutions.length > 0, true);
+  assert("6332J simple solution is tagged simple", detailed.simpleSolutions[0].style, "simple");
+  assert("6332J simple solution evaluates to 21", Math.abs(m.evaluate(detailed.simpleSolutions[0].expr) - 21) < 0.001, true);
+}
+
+{
+  const m = loadGameModules("normal");
+  const detailed = m.solveHandDetailed([3, 3, 3, 3], 21, m.getBinaryOps(), { maxMs: 1000 });
+  assert("normal detailed has cool solution", detailed.coolSolutions.length > 0, true);
+  assert("normal cool solution uses ^ or √", detailed.coolSolutions.some(s => s.expr.includes("^") || s.expr.includes("√")), true);
+  assertSolutionsPlayable("normal cool solution", m, detailed.coolSolutions, [3, 3, 3, 3]);
+}
+
+{
+  const m = loadGameModules("hard");
+  const detailed = m.solveHandDetailed([4, 3, 1, 1], 21, m.getBinaryOps(), { maxMs: 1000 });
+  assert("hard detailed has cool solution", detailed.coolSolutions.length > 0, true);
+  assert("hard cool solution can use factorial", detailed.coolSolutions.some(s => s.expr.includes("!")), true);
+  assertSolutionsPlayable("hard cool solution", m, detailed.coolSolutions, [4, 3, 1, 1]);
+}
+
+section("rateSolution: only positive bonus");
+
+{
+  const m = loadGameModules("hard");
+  const plain = m.rateSolution("6+3+3+2+7", "hard", 5);
+  const cool = m.rateSolution("3!*3+3", "hard", 4);
+  assert("plain solution has no negative score", plain.score >= 0, true);
+  assert("cool solution scores higher than plain", cool.score > plain.score, true);
+  assert("cool solution has reward tags", cool.tags.length > 0, true);
+}
+
+section("aiSolve: fake timeout 不消耗缓存 (证实超时不缓存)");
+
+{
+  const m = loadGameModules("normal");
+  const timedOut = m.aiSolve([1, 6, 13, 13, 8], 21, m.getBinaryOps(), { maxMs: 1 });
+  assert("timeout marks timedOut", timedOut.timedOut, true);
+  assert("timeout returns empty array", timedOut.length, 0);
+
+  const fresh = m.aiSolve([1, 6, 13, 13, 8], 21, m.getBinaryOps());
+  assert("fresh call after timeout returns fresh results (not cached from timeout)", fresh.timedOut, false);
+}
+
+section("aiSolve: 一元深度限制不影响合法解");
+
+{
+  const m = loadGameModules("normal");
+  const results = m.aiSolve([4, 4, 4], 6, m.getBinaryOps(), { maxMs: 300 });
+  assert("aiSolve([4,4,4],6) with sqrt finds solution", results.length > 0, true);
+  assert("solution not timed out", results.timedOut, false);
+}
+
+{
+  const m = loadGameModules("hard");
+  const results = m.aiSolve([3, 3, 3, 3], 21, m.getBinaryOps(), { maxMs: 300 });
+  assert("aiSolve([3,3,3,3],21) with factorial finds solution", results.length > 0, true);
+  assert("factorial solution not timed out", results.timedOut, false);
+}
+
+section("aiSolve: visitedMultisets 剪枝不丢失解");
+
+{
+  const m = loadGameModules("easy");
+  const results1 = m.aiSolve([10, 10, 4, 4], 24, m.getBinaryOps(), { maxMs: 300 });
+  assert("aiSolve([10,10,4,4],24) finds solution with dedup", results1.length > 0, true);
+
+  const results2 = m.aiSolve([1, 2, 3, 4], 24, m.getBinaryOps(), { maxMs: 300 });
+  assert("aiSolve([1,2,3,4],24) finds solution with dedup", results2.length > 0, true);
 }
 
 // ==================== 结果汇总 ====================

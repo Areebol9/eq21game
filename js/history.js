@@ -21,8 +21,10 @@ function loadHistory() {
 function saveHistory(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return true;
   } catch (e) {
     showToast('历史记录保存失败（存储空间不足）', 'error');
+    return false;
   }
 }
 
@@ -93,6 +95,15 @@ function calculateScore(p, expr, handLength, submits, timeSec) {
     breakdown.push({ label: '阶乘狂人', score: 300 });
   }
 
+  if (typeof rateSolution === 'function') {
+    const rating = rateSolution(expr, game.difficulty, handLength);
+    if (rating.score >= 160) {
+      const coolBonus = Math.min(500, Math.round(rating.score / 2));
+      total += coolBonus;
+      breakdown.push({ label: '妙解加分', score: coolBonus });
+    }
+  }
+
   // 成就加分
   if (handLength <= 3) {
     total += 150;
@@ -137,6 +148,12 @@ function getTags(formula, handLength, submits, timeSec, streak, difficulty) {
   if (ops.hasPow) tags.push('\uD83D\uDD2E\u5E42\u6307\u795E\u7B97');
   if (ops.hasSqrt) tags.push('\uD83D\uDCD0\u5F00\u65B9\u5999\u7528');
   if (ops.hasFact) tags.push('\uD83D\uDCA5\u9636\u4E58\u72C2\u4EBA');
+  if (typeof rateSolution === 'function') {
+    const rating = rateSolution(formula, difficulty, handLength);
+    for (const tag of rating.tags) {
+      if (!tags.includes(tag)) tags.push(tag);
+    }
+  }
   if (streak >= 3) tags.push('\uD83D\uDD25' + streak + '\u8FDE\u80DC');
   return tags;
 }
@@ -153,11 +170,10 @@ function addRecord(record) {
 }
 
 function clearHistory() {
-  if (confirm('确定清空所有对局历史吗？此操作不可恢复。')) {
-    saveHistory({ version: STORAGE_VERSION, records: [] });
-    renderHistoryPanel();
-    showToast('历史记录已清空', 'info');
-  }
+  if (!saveHistory({ version: STORAGE_VERSION, records: [] })) return false;
+  renderHistoryPanel();
+  showToast('历史记录已清空', 'info');
+  return true;
 }
 
 // ==================== 统计函数 ====================
@@ -191,7 +207,7 @@ function getRecentRecords(records, n) {
 }
 
 // ==================== 辅助格式化 ====================
-function formatTime(sec) {
+function formatHistoryTime(sec) {
   if (sec == null || isNaN(sec)) return '--';
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
@@ -229,7 +245,7 @@ function renderHistoryPanel() {
       '<div class="history-stat-card"><div class="stat-val">' + stats.totalGames + '</div><div class="stat-label">竞技局</div></div>' +
       '<div class="history-stat-card"><div class="stat-val">' + stats.winRate + '%</div><div class="stat-label">胜率</div></div>' +
       '<div class="history-stat-card"><div class="stat-val">⭐' + stats.highestScore + '</div><div class="stat-label">最高</div></div>' +
-      '<div class="history-stat-card"><div class="stat-val">⚡' + formatTime(stats.fastestSec) + '</div><div class="stat-label">最快</div></div>';
+      '<div class="history-stat-card"><div class="stat-val">⚡' + formatHistoryTime(stats.fastestSec) + '</div><div class="stat-label">最快</div></div>';
   }
 
   // 训练记录提示
@@ -254,7 +270,7 @@ function renderHistoryPanel() {
     var bestHtml = '<div class="best-title">🏆 最漂亮解法</div>';
     bestHtml += '<div class="best-name">' + hEscape(best.player) + '</div>';
     bestHtml += '<div class="best-score">' + best.score + '分</div>';
-    bestHtml += '<div class="best-time">' + formatTime(best.timeSec) + '</div>';
+    bestHtml += '<div class="best-time">' + formatHistoryTime(best.timeSec) + '</div>';
     bestHtml += '<div class="best-hand">' + (best.hand || []).map(function(v) { return cardFace(v); }).join(' ') + '</div>';
     bestHtml += '<div class="best-formula">' + hEscape(best.formula || '') + '</div>';
     if (bestTags.length > 0) {
@@ -285,7 +301,7 @@ function renderHistoryPanel() {
         recHtml += '<span class="rec-result ' + (isWin ? 'win' : 'lose') + '">' + (isWin ? '✅' : '❌') + '</span>';
         recHtml += '<span class="rec-player">' + hEscape(r.player) + '</span>';
         recHtml += '<span class="rec-score">' + r.score + '分</span>';
-        recHtml += '<span class="rec-time">' + formatTime(r.timeSec) + '</span>';
+        recHtml += '<span class="rec-time">' + formatHistoryTime(r.timeSec) + '</span>';
         recHtml += '<span class="mode-tag mode-' + r.mode + '">' + (MODE_LABELS[r.mode] || r.mode) + '</span>';
         recHtml += '</div>';
         recHtml += '<div class="rec-hand">' + (r.hand || []).map(function(v) { return cardFace(v); }).join(' ') + '</div>';

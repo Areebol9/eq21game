@@ -11,10 +11,50 @@ function addLog(msg, cls) {
   const line = document.createElement('div'); line.className = 'log-line ' + (cls || '');
   line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
   lp.appendChild(line); lp.scrollTop = lp.scrollHeight;
+  updateLogToggleCount();
+}
+
+function updateLogToggleCount() {
+  const countEl = document.getElementById('log-toggle-count');
+  const lp = document.getElementById('log-panel');
+  if (countEl && lp) countEl.textContent = String(lp.children.length);
+}
+
+function setLogCollapsed(collapsed) {
+  const shell = document.getElementById('log-shell');
+  const btn = document.getElementById('btn-log-toggle');
+  if (!shell || !btn) return;
+  shell.classList.toggle('collapsed', !!collapsed);
+  btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+}
+
+function toggleLogPanel() {
+  const shell = document.getElementById('log-shell');
+  if (!shell) return;
+  setLogCollapsed(!shell.classList.contains('collapsed'));
+}
+
+function initLogPanel() {
+  const btn = document.getElementById('btn-log-toggle');
+  if (btn) btn.onclick = toggleLogPanel;
+  setLogCollapsed(window.matchMedia && window.matchMedia('(max-width: 699px)').matches);
+  updateLogToggleCount();
 }
 
 // ==================== 底部信息栏 + 提示 ====================
 let _autoHintTimer = null;
+function clearSolutionHint() {
+  if (_autoHintTimer) {
+    clearTimeout(_autoHintTimer);
+    _autoHintTimer = null;
+  }
+  const ha = document.getElementById('hint-area');
+  if (ha) {
+    ha.classList.add('hidden');
+    ha.innerHTML = '';
+  }
+}
+
 function updateFooterBar() {
   const fb = document.getElementById('footer-bar');
   if (game.phase === 'menu') { fb.innerHTML = '<span class="icon">♠</span> 选择游戏模式开始吧！'; return; }
@@ -49,16 +89,31 @@ function updateSolutionHint() {
   if (game.mode !== 'solo' || game.phase !== 'playing' || game._maxHintShown) return;
   const p = game.players[0];
   if (!p || p.conceded) return;
-  const handKey = p.hand.slice().sort((a, b) => a - b).join(',');
-  if (handKey === _lastCheckedHand) return;
+  const handKey = getSolutionHandKey(p.hand);
+  const existingCache = getCurrentSolutionCache();
+  if (handKey === _lastCheckedHand && existingCache && !existingCache.pending) return;
   _lastCheckedHand = handKey;
   if (_autoHintTimer) clearTimeout(_autoHintTimer);
   _autoHintTimer = setTimeout(() => {
-    const solutions = aiSolve([...p.hand], game.target, getBinaryOps());
+    _autoHintTimer = null;
+    if (game.mode !== 'solo' || game.phase !== 'playing') return;
+    const current = game.players[0];
+    if (!current || current.conceded) return;
+    const currentKey = getSolutionHandKey(current.hand);
+    if (currentKey !== handKey) return;
+
+    requestSolutionAnalysis();
+    const cache = getCurrentSolutionCache();
     const ha = document.getElementById('hint-area');
-    if (solutions.length === 0) {
+    if (!cache || cache.pending || cache.timedOut) {
+      ha.classList.add('hidden');
+      ha.innerHTML = '';
+    } else if (cache.simple.length === 0 && cache.cool.length === 0) {
       ha.classList.remove('hidden');
       ha.innerHTML = '🤔 当前手牌<em>似乎无解</em>，建议加牌试试';
+    } else {
+      ha.classList.add('hidden');
+      ha.innerHTML = '';
     }
   }, 100);
 }
@@ -89,7 +144,7 @@ function triggerVictoryEffect() {
 function setFeedback(idx, msg, type) {
   const p = game.players[idx]; p.feedback = msg; p.feedbackType = type;
   const c = document.querySelector('.player-card[data-index="' + idx + '"]');
-  if (c) { const fb = c.querySelector('.feedback'); if (fb) { fb.textContent = msg; fb.className = 'feedback ' + type; } }
+  if (c) { const fb = c.querySelector('.feedback'); if (fb) { fb.textContent = msg; fb.title = msg; fb.className = 'feedback ' + type; } }
 }
 function shakeCard(idx) {
   const c = document.querySelector('.player-card[data-index="' + idx + '"]');
@@ -230,6 +285,14 @@ function renderAll() {
       btnHint.disabled = (game.phase !== 'playing' || game.stats.hintsUsed >= game.stats.maxHints || game.aiThinking);
       btnHint.onclick = () => showHint();
       act.appendChild(btnHint);
+      if (game.difficulty !== 'easy') {
+        const btnCool = document.createElement('button');
+        btnCool.className = 'btn-hint btn-cool';
+        btnCool.textContent = '🎩妙解';
+        btnCool.disabled = (game.phase !== 'playing' || game.aiThinking);
+        btnCool.onclick = () => showCoolHint();
+        act.appendChild(btnCool);
+      }
     }
 
     const btnConc = document.createElement('button');
@@ -279,6 +342,7 @@ function renderAll() {
     const fb = document.createElement('div');
     fb.className = 'feedback ' + (p.feedbackType || '');
     fb.textContent = p.feedback || '';
+    fb.title = p.feedback || '';
     card.appendChild(fb);
 
     area.appendChild(card);
@@ -423,6 +487,7 @@ function renderTabletop() {
     const fb = document.createElement('div');
     fb.className = 'feedback ' + (p.feedbackType || '');
     fb.textContent = p.feedback || '';
+    fb.title = p.feedback || '';
     card.appendChild(fb);
 
     area.appendChild(card);

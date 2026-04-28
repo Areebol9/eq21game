@@ -10,6 +10,7 @@ function init() {
   document.getElementById('btn-ai').onclick = () => startMode('ai');
   document.getElementById('btn-online').onclick = showComingSoon;
   document.getElementById('btn-rules').onclick = showRules;
+  document.getElementById('btn-back').onclick = goToMenu;
 
   // 规则弹窗关闭
   document.getElementById('btn-close-rules').onclick = hideRules;
@@ -31,6 +32,7 @@ function init() {
       updateTableNameInputs();
     };
   });
+  resetTableSetupDefaults();
 
   // AI 对战
   document.querySelectorAll('.ai-level-option').forEach(btn => {
@@ -46,10 +48,17 @@ function init() {
   // 音效开关
   document.getElementById('btn-sound').onclick = toggleSound;
 
+  // 日志折叠
+  initLogPanel();
+
   // 历史面板
   document.getElementById('btn-history').onclick = openHistory;
   document.getElementById('btn-history-close').onclick = closeHistory;
-  document.getElementById('btn-history-clear').onclick = () => { if (confirm('确定要清空所有对局历史吗？此操作不可恢复！')) { clearHistory(); openHistory(); } };
+  document.getElementById('btn-history-clear').onclick = () => {
+    if (confirm('确定要清空所有对局历史吗？此操作不可恢复！') && clearHistory()) {
+      openHistory();
+    }
+  };
 
   // 键盘快捷键：Enter 提交
   document.addEventListener('keydown', (e) => {
@@ -68,6 +77,9 @@ function init() {
   game.soundEnabled = localStorage.getItem('eq21_sound') !== 'off';
   updateSoundButton();
 
+  // 轻量键盘可访问性
+  enableKeyboardActivation();
+
   // 关闭预设 AI 倒计时
   stopAiThinking();
   State.set('_firstRender', false);
@@ -78,4 +90,17 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+function enableKeyboardActivation() {
+  document.querySelectorAll('.menu-card, .choice-card').forEach(el => {
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (typeof el.onclick === 'function') el.onclick(e);
+      }
+    });
+  });
 }

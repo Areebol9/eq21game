@@ -1,10 +1,17 @@
 # 🧪 算式21点 — 手工测试清单
 
 > ⚠️ **本文件为手工回归测试清单。自动化测试见 `tests/` 目录：**
-> - `node tests/test-expression.js` — 132 条核心逻辑单元测试
+> - `node tests/test-expression.js` — 177 条核心逻辑单元测试
 > - `node tests/test-fuzz.js` — 2766 条自动生成式 Fuzz 测试
+> - `node tests/test-static.js` — 48 条静态资源、PWA 清单、Service Worker 缓存、JS 语法检查
+> - `node tests/test-dom-flow.js` — 66 条零依赖 fake DOM 流程测试
+> - `node tests/test-worker-flow.js` — 28 条 Solver Worker 契约、超时和解法可提交性测试
+> - `node tests/test-solver-perf.js` — 默认 128 个手牌样本的日常求解器性能回归测试
+> - `node tests/test-solver-perf.js --stress --seed 20260428 --hands 1000` — 偶发卡死排查用压力测试
 >
-> 自动化测试覆盖了表达式求值、手牌验证、AI 求解、词法分析等核心链路。手工测试用于 GUI/UX 相关的验证。
+> 自动化测试覆盖了表达式求值、手牌验证、AI 求解、词法分析、资源引用、围桌入口、历史记录和提示状态等稳定链路。手工测试用于真实浏览器 GUI/UX、动画、响应式和 PWA 离线行为验证。
+>
+> 浏览器/手机手工测试建议优先从项目根目录运行 `python -m http.server 8000`，再访问 `http://localhost:8000`；手机可用同局域网 IP 访问做 UI/性能验证。`file://` 只适合快速预览，不适合 PWA、Service Worker 或真实移动端行为验证；PWA/Service Worker 仍需 localhost 或 HTTPS 环境。
 
 ---
 
@@ -90,7 +97,7 @@
 | # | 测试项 | 操作 | 预期结果 | 通过? |
 |---|--------|------|----------|-------|
 | 5.1 | 2人对坐布局 | 选双人对坐→开始游戏 | 上方玩家区域180°旋转，中央信息栏可见 | ☐ |
-| 5.2 | 3/4人布局 | 查看三人围桌/四人方桌选项 | 显示"即将推出"标签，不可选中 | ☐ |
+| 5.2 | 3/4人布局 | 选择三人围桌/四人方桌→开始游戏 | 玩家数量正确，双列网格布局和中央信息栏正常 | ☐ |
 | 5.3 | 点击牌面插入 | 点击手牌卡片 | 牌值插入 `.expr-display` 表达式展示框 | ☐ |
 | 5.4 | 符号按钮插入 | 点击 + - * / ( ) 按钮 | 符号插入 `.expr-display` | ☐ |
 | 5.5 | ⌫ 退格 | 点击 ⌫ 按钮 | 删除表达式最后一个字符 | ☐ |

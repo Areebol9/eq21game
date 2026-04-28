@@ -23,13 +23,18 @@
     <span class="header-suit">♣</span>
   </div>
   <div class="info">
-    <span id="diff-badge" class="diff-badge diff-easy">简单</span>
-     <span id="mode-badge" class="mode-badge">本地多人</span>
-     牌库:<span id="deck-count">40</span> &nbsp;|&nbsp; ⏱<span id="timer">00:00</span>
-     <button id="btn-rules" onclick="showRules()">📖 规则</button>
-     <button id="btn-sound" title="音效开关">🔊</button>
-     <button id="btn-history" title="对局历史">📜</button>
-     <button id="btn-back" onclick="goToMenu()">← 菜单</button>
+    <div class="status-chips">
+      <span id="diff-badge" class="diff-badge diff-easy">简单</span>
+      <span id="mode-badge" class="mode-badge">本地多人</span>
+      <span class="status-chip">牌库:<span id="deck-count">40</span></span>
+      <span class="status-chip">⏱<span id="timer">00:00</span></span>
+    </div>
+    <div class="header-actions">
+      <button id="btn-rules" class="header-action" onclick="showRules()" title="游戏规则" aria-label="游戏规则"><span class="btn-icon">📖</span><span class="btn-text">规则</span></button>
+      <button id="btn-sound" class="header-action" title="音效开关" aria-label="音效开关"><span class="btn-icon">🔊</span></button>
+      <button id="btn-history" class="header-action" title="对局历史" aria-label="对局历史"><span class="btn-icon">📜</span></button>
+      <button id="btn-back" class="header-action" onclick="goToMenu()" title="返回菜单" aria-label="返回菜单"><span class="btn-icon">←</span><span class="btn-text">菜单</span></button>
+    </div>
   </div>
 </div>
 
@@ -47,7 +52,14 @@
     <div class="tc-stat"><div class="tc-val" style="color:var(--gold)">21</div><div class="tc-label">目标</div></div>
     <div class="tc-event" id="tc-event"></div>
   </div>
-  <div id="log-panel"></div>
+  <section id="log-shell" class="log-shell">
+    <button id="btn-log-toggle" class="log-toggle" type="button" aria-expanded="true" aria-controls="log-panel" title="展开或折叠日志" aria-label="展开或折叠日志">
+      <span class="log-toggle-title">日志</span>
+      <span id="log-toggle-count" class="log-toggle-count">0</span>
+      <span class="log-toggle-icon">▾</span>
+    </button>
+    <div id="log-panel"></div>
+  </section>
 </div>
 
 <!-- 底部信息条 -->
@@ -112,9 +124,9 @@
       </div>
     </div>
     <div class="menu-footer">
-      <button class="btn-menu-secondary" onclick="openHistory()">对局历史</button>
+      <button class="btn-menu-secondary" onclick="openHistory()" aria-label="打开对局历史">对局历史</button>
       <span class="menu-footer-divider">|</span>
-      <button class="btn-menu-secondary" onclick="showRules()">游戏规则</button>
+      <button class="btn-menu-secondary" onclick="showRules()" aria-label="打开游戏规则">游戏规则</button>
     </div>
   </div>
 </div>
@@ -161,7 +173,7 @@
     </ul>
 
     <div style="text-align:center;margin-top:14px">
-      <button id="btn-close-rules">知道了！</button>
+      <button id="btn-close-rules" aria-label="关闭游戏规则">知道了！</button>
     </div>
   </div>
 </div>
@@ -189,8 +201,8 @@
         <span class="ch-for">"几乎不会错过"</span>
       </div>
     </div>
-    <button id="btn-start-ai">开始对战</button>
-    <button class="secondary" id="btn-ai-back">返回菜单</button>
+    <button id="btn-start-ai" aria-label="开始 AI 对战">开始对战</button>
+    <button class="secondary" id="btn-ai-back" aria-label="返回菜单">返回菜单</button>
   </div>
 </div>
 
@@ -217,8 +229,8 @@
       </div>
     </div>
     <div id="table-name-inputs"></div>
-    <button id="btn-start-table">开始对局</button>
-    <button class="secondary" id="btn-table-back">返回菜单</button>
+    <button id="btn-start-table" aria-label="开始围桌对局">开始对局</button>
+    <button class="secondary" id="btn-table-back" aria-label="返回菜单">返回菜单</button>
   </div>
 </div>
 
@@ -230,8 +242,8 @@
     <p id="result-detail"></p>
     <div id="result-score"></div>
     <div id="result-tags"></div>
-    <button id="btn-again">再来一局</button>
-    <button class="secondary" id="btn-menu">返回菜单</button>
+    <button id="btn-again" aria-label="再来一局">再来一局</button>
+    <button class="secondary" id="btn-menu" aria-label="返回菜单">返回菜单</button>
   </div>
 </div>
 
@@ -240,9 +252,9 @@
   <div class="history-header">
     <span class="history-title">📜 对局历史</span>
     <div class="history-header-actions">
-      <button id="btn-history-clear" class="btn-sm" title="清空历史">🗑 清空</button>
+      <button id="btn-history-clear" class="btn-sm" title="清空历史" aria-label="清空历史">🗑 清空</button>
       <span id="history-streak" class="history-streak"></span>
-      <button id="btn-history-close" class="btn-close-panel">✕ 关闭</button>
+      <button id="btn-history-close" class="btn-close-panel" aria-label="关闭历史面板">✕ 关闭</button>
     </div>
   </div>
   <div class="history-body">

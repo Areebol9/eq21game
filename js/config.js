@@ -17,7 +17,17 @@ const game = {
   currentScore: 0,
   scoreBreakdown: [],
   gameTags: [],
+  solutionCache: { handKey: '', simple: [], cool: [], pending: false, timedOut: false },
+  solutionWorker: null,
+  solutionTaskId: 0,
+  coolHintUsed: false,
   soundEnabled: true
+};
+
+const SOLVE_BUDGETS = {
+  autoHintMs: 80,
+  manualHintMs: 300,
+  aiThinkMs: 500
 };
 
 const State = {
@@ -151,7 +161,9 @@ function toggleSound() {
 function updateSoundButton() {
   const btn = document.getElementById('btn-sound');
   if (btn) {
-    btn.textContent = game.soundEnabled ? '🔊' : '🔇';
+    btn.innerHTML = '<span class="btn-icon">' + (game.soundEnabled ? '🔊' : '🔇') + '</span>';
+    btn.title = game.soundEnabled ? '关闭音效' : '开启音效';
+    btn.setAttribute('aria-label', btn.title);
   }
 }
 

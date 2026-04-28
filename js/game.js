@@ -8,6 +8,85 @@ function stopTimer() {
   if (game.timerInterval) { clearInterval(game.timerInterval); State.set('timerInterval', null); }
 }
 
+// ==================== Solo solution worker ====================
+function getSolutionHandKey(hand) {
+  return [game.difficulty, game.target, hand.slice().sort((a, b) => a - b).join(',')].join('|');
+}
+
+function resetSolutionCache() {
+  State.set('solutionCache', { handKey: '', simple: [], cool: [], pending: false, timedOut: false });
+  State.set('coolHintUsed', false);
+}
+
+function getCurrentSolutionCache() {
+  const p = game.players[0];
+  if (!p) return null;
+  const handKey = getSolutionHandKey(p.hand);
+  return game.solutionCache && game.solutionCache.handKey === handKey ? game.solutionCache : null;
+}
+
+function ensureSolutionWorker() {
+  if (game.solutionWorker) return game.solutionWorker;
+  if (typeof Worker === 'undefined') return null;
+  try {
+    const worker = new Worker('js/solver-worker.js');
+    worker.onmessage = function(e) {
+      const data = e.data || {};
+      const cache = game.solutionCache;
+      if (!cache || data.id !== game.solutionTaskId || data.handKey !== cache.handKey) return;
+      cache.simple = data.simpleSolutions || [];
+      cache.cool = data.coolSolutions || [];
+      cache.pending = false;
+      cache.timedOut = !!data.timedOut;
+      _lastCheckedHand = '';
+      updateSolutionHint();
+      renderAll();
+    };
+    worker.onerror = function() {
+      const cache = game.solutionCache;
+      if (cache) { cache.pending = false; cache.timedOut = true; }
+    };
+    State.set('solutionWorker', worker);
+    return worker;
+  } catch (e) {
+    return null;
+  }
+}
+
+function requestSolutionAnalysis() {
+  if (game.mode !== 'solo' || game.phase !== 'playing') return;
+  const p = game.players[0];
+  if (!p || p.conceded) return;
+  const handKey = getSolutionHandKey(p.hand);
+  if (game.solutionCache && game.solutionCache.handKey === handKey && game.solutionCache.pending) return;
+  if (game.solutionCache && game.solutionCache.handKey === handKey && (game.solutionCache.simple.length || game.solutionCache.cool.length || game.solutionCache.timedOut)) return;
+
+  State.set('solutionTaskId', game.solutionTaskId + 1);
+  State.set('solutionCache', { handKey, simple: [], cool: [], pending: true, timedOut: false });
+  const worker = ensureSolutionWorker();
+  if (worker) {
+    worker.postMessage({
+      id: game.solutionTaskId,
+      handKey,
+      hand: [...p.hand],
+      target: game.target,
+      difficulty: game.difficulty,
+      mode: game.mode,
+      maxMs: 1600
+    });
+    return;
+  }
+
+  const detailed = solveHandDetailed([...p.hand], game.target, getBinaryOps(), { maxMs: SOLVE_BUDGETS.manualHintMs });
+  State.set('solutionCache', {
+    handKey,
+    simple: detailed.simpleSolutions,
+    cool: detailed.coolSolutions,
+    pending: false,
+    timedOut: detailed.timedOut
+  });
+}
+
 // ==================== 提示系统（增强版） ====================
 function extractFirstStep(solution) {
   if (!solution) return null;
@@ -22,7 +101,23 @@ function showHint() {
   if (game.mode !== 'solo' || game.phase !== 'playing') return;
   if (game.stats.hintsUsed >= game.stats.maxHints) return;
   const p = game.players[0];
-  const solutions = aiSolve([...p.hand], game.target, getBinaryOps());
+  requestSolutionAnalysis();
+  const cache = getCurrentSolutionCache();
+  if (!cache || cache.pending) {
+    clearSolutionHint();
+    showToast('正在观察这手牌，提示次数保留', 'submit');
+    renderAll();
+    return;
+  }
+  const solutionInfos = cache.simple.length ? cache.simple : cache.cool;
+  const solutions = solutionInfos.map(s => s.expr);
+  if (cache.timedOut && solutions.length === 0) {
+    clearSolutionHint();
+    showToast('这手牌还没有稳定提示，提示次数保留', 'submit');
+    addLog('提示：后台求解未完成，未消耗提示次数', 'hint');
+    renderAll();
+    return;
+  }
   game.stats.hintsUsed++;
   const level = game.stats.hintsUsed;
 
@@ -72,6 +167,31 @@ function showHint() {
   } else {
     showToast('💡 答案：' + solutions[0] + ' = 21', 'win');
     addLog('提示 #3（答案）：' + solutions[0] + ' = 21', 'hint');
+  }
+  renderAll();
+}
+
+function showCoolHint() {
+  if (game.mode !== 'solo' || game.phase !== 'playing') return;
+  if (game.difficulty === 'easy') return;
+  requestSolutionAnalysis();
+  const cache = getCurrentSolutionCache();
+  if (!cache || cache.pending) {
+    showToast('正在寻找妙解，稍等一拍', 'submit');
+    return;
+  }
+  if (!cache.cool.length) {
+    showToast('这手牌更适合朴素解法', 'submit');
+    return;
+  }
+  const solution = cache.cool[0];
+  State.set('coolHintUsed', true);
+  showToast('🎩 妙解思路：' + solution.expr + ' = 21', 'win');
+  addLog('妙解提示：' + solution.expr + ' = 21', 'hint');
+  const p = game.players[0];
+  if (p) {
+    p.feedback = '🎩 妙解：' + solution.expr;
+    p.feedbackType = 'info';
   }
   renderAll();
 }
@@ -151,6 +271,20 @@ function submitFormula(idx) {
           }
         }
       }
+    } else if (game.mode === 'ai') {
+      const human = game.players.find(player => !player.isAi);
+      if (human) {
+        addRecord({
+          id: generateId(), ts: Date.now(),
+          mode: game.mode, difficulty: game.difficulty,
+          result: 'lose',
+          player: human.name, hand: [...human.hand],
+          formula: '', score: 50,
+          timeSec: game.timerSec,
+          submits: game.stats.submits, hintsUsed: game.stats.hintsUsed || 0,
+          tags: []
+        });
+      }
     }
 
     p.feedback = '🎉 =' + game.target + ' 获胜！+' + game.currentScore + '分';
@@ -194,9 +328,10 @@ function drawForPlayer(idx) {
   p.hand.push(card); p.feedback = '加牌: +' + cardFace(card); p.feedbackType = 'ok';
   addLog('🃏 ' + p.name + ' 加了一张牌 → ' + cardFace(card) + ' (手牌' + p.hand.length + '张)', 'info');
   showToast('🃏 ' + p.name + ' +牌 → ' + cardFace(card), 'draw');
-  if (game.mode === 'solo') { game.stats.draws++; _lastCheckedHand = ''; }
+  if (game.mode === 'solo') { game.stats.draws++; _lastCheckedHand = ''; resetSolutionCache(); }
   p._newCardIdx = p.hand.length - 1;
   updateDeckCount(); renderAll(); updateFooterBar();
+  if (game.mode === 'solo') updateSolutionHint();
   soundPlay('draw');
   if (game.mode === 'ai' && p.isAi) scheduleAiThink();
 }
@@ -283,8 +418,11 @@ function scheduleAiThink() {
   setTimeout(() => {
     if (game.phase !== 'playing' || ai.conceded) { State.set('aiThinking', false); renderAll(); updateFooterBar(); return; }
 
-    const solutions = aiSolve([...ai.hand], game.target, getBinaryOps());
+    const solutions = aiSolve([...ai.hand], game.target, getBinaryOps(), { maxMs: SOLVE_BUDGETS.aiThinkMs });
     const hasSolution = solutions.length > 0;
+    if (solutions.timedOut && !hasSolution) {
+      addLog('AI求解超过' + SOLVE_BUDGETS.aiThinkMs + 'ms，暂时按想不出处理', 'info');
+    }
     State.set('aiSolved', hasSolution);
     State.set('aiSolution', hasSolution ? solutions[0] : null);
 
@@ -354,6 +492,8 @@ function scheduleAiThink() {
 // ==================== 游戏流程 ====================
 function selectDifficulty(diff, btn) {
   State.set('difficulty', diff);
+  if (typeof clearAiCache === 'function') clearAiCache();
+  resetSolutionCache();
   document.querySelectorAll('#menu-overlay .choice-card').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   document.getElementById('diff-badge').textContent = { easy: '简单', normal: '普通', hard: '困难' }[diff];
@@ -373,8 +513,10 @@ function hideRules() { document.getElementById('rules-overlay').classList.add('h
 
 function goToMenu() {
   stopTimer(); stopAiThinking();
+  resetSolutionCache();
   State.set('phase', 'menu'); State.set('players', []); State.set('deck', []); State.set('timerSec', 0); State.set('aiSolved', false); State.set('aiSolution', null);
   State.set('_firstRender', false); State.set('_solving', false); _lastCheckedHand = '';
+  if (typeof clearSolutionHint === 'function') clearSolutionHint();
   State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
   updateTimerUI(); updateDeckCount();
   const tc = document.getElementById('tabletop-center');
@@ -400,7 +542,7 @@ function startMode(mode) {
   } else if (mode === 'local') {
     State.set('mode', 'local'); updateModeBadge('围桌模式');
     document.getElementById('table-setup-overlay').classList.remove('hidden');
-    document.querySelectorAll('.table-opt').forEach(c => c.classList.remove('selected'));
+    resetTableSetupDefaults();
   } else if (mode === 'ai') {
     State.set('mode', 'ai'); updateModeBadge('AI对战');
     document.getElementById('ai-setup-overlay').classList.remove('hidden');
@@ -411,6 +553,14 @@ function updateModeBadge(text) {
   const b = document.getElementById('mode-badge');
   if (text) { b.textContent = text; b.style.display = ''; }
   else b.style.display = 'none';
+}
+
+function resetTableSetupDefaults() {
+  const options = document.querySelectorAll('.table-opt');
+  options.forEach(c => c.classList.remove('selected'));
+  const defaultOption = document.querySelector('.table-opt[data-players="2"]') || options[0];
+  if (defaultOption) defaultOption.classList.add('selected');
+  updateTableNameInputs();
 }
 
 function updateTableNameInputs() {
@@ -457,6 +607,8 @@ function dealCards() {
 }
 
 function startSoloGame() {
+  if (typeof clearSolutionHint === 'function') clearSolutionHint();
+  resetSolutionCache();
   initPlayers(['玩家'], [false]);
   dealCards();
   State.set('phase', 'playing'); State.set('stats', { submits: 0, hintsUsed: 0, maxHints: 3, draws: 0 });
@@ -554,8 +706,10 @@ function showResult(winnerIdx) {
 
 function resetGame() {
   stopTimer(); stopAiThinking();
+  resetSolutionCache();
   State.set('phase', 'menu'); State.set('players', []); State.set('deck', []); State.set('timerSec', 0); State.set('_maxHintShown', false);
   State.set('aiSolved', false); State.set('aiSolution', null); State.set('_firstRender', false); State.set('_solving', false); _lastCheckedHand = '';
+  if (typeof clearSolutionHint === 'function') clearSolutionHint();
   State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
   updateTimerUI(); updateDeckCount();
   document.getElementById('result-overlay').classList.add('hidden');
@@ -568,6 +722,7 @@ function resetGame() {
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   if (game.mode === 'local') {
+    resetTableSetupDefaults();
     document.getElementById('table-setup-overlay').classList.remove('hidden');
   } else if (game.mode === 'ai') {
     document.getElementById('ai-setup-overlay').classList.remove('hidden');
