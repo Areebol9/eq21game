@@ -453,6 +453,7 @@ function submitFormula(idx) {
     document.getElementById('hint-area').classList.add('hidden');
     soundPlay('win'); triggerVictoryEffect();
     showResult(idx); renderAll();
+    if (game.mode === 'local') updateTcEvent('🏆 ' + p.name + ' 获胜！');
   } else {
     const diff = result - game.target;
     const absDiff = Math.abs(diff);
@@ -471,6 +472,7 @@ function submitFormula(idx) {
     addLog(p.name + ' 提交算式 "' + expr + '" = ' + formatNum(result) + ' ≠ ' + game.target + ' ❌', 'err');
     showToast(toastMsg, 'error');
     shakeCard(idx); soundPlay('submit');
+    if (game.mode === 'local') updateTcEvent(p.name + ' 提交 = ' + formatNum(result));
   }
 }
 
@@ -486,6 +488,7 @@ function drawForPlayer(idx) {
   if (game.mode === 'solo') { game.stats.draws++; _lastCheckedHand = ''; resetSolutionCache(); }
   p._newCardIdx = p.hand.length - 1;
   updateDeckCount(); renderAll(); updateFooterBar();
+  if (game.mode === 'local') updateTcEvent(p.name + ' +牌 → ' + cardFace(card));
   if (game.mode === 'solo') updateSolutionHint();
   soundPlay('draw');
   if (game.mode === 'ai' && p.isAi) scheduleAiThink();
@@ -512,6 +515,7 @@ function concedePlayer(idx) {
 
   addLog('🏳️ ' + p.name + ' 举白旗了！', 'info');
   showToast('🏳️ ' + p.name + ' 认输', 'concede');
+  if (game.mode === 'local') updateTcEvent(p.name + ' 认输');
   renderAll(); updateFooterBar();
   checkGameEnd();
 }
@@ -661,12 +665,16 @@ function selectAiLevel(lvl, btn) {
   btn.classList.add('selected');
 }
 
-function showComingSoon() { alert('联网对战模式即将推出，敬请期待！'); }
+function showComingSoon() {
+  if (typeof openOnlineSetup === 'function') openOnlineSetup();
+  else alert('联网对战模式即将推出，敬请期待！');
+}
 
 function showRules() { document.getElementById('rules-overlay').classList.remove('hidden'); }
 function hideRules() { document.getElementById('rules-overlay').classList.add('hidden'); }
 
 function goToMenu() {
+  if (game.mode === 'online' && typeof disconnectOnline === 'function') disconnectOnline(game.phase === 'ended');
   stopTimer(); stopAiThinking();
   resetSolutionCache();
   State.set('phase', 'menu'); State.set('players', []); State.set('deck', []); State.set('timerSec', 0); State.set('aiSolved', false); State.set('aiSolution', null);
@@ -685,6 +693,10 @@ function goToMenu() {
   document.getElementById('menu-overlay').classList.remove('hidden');
   document.getElementById('ai-setup-overlay').classList.add('hidden');
   document.getElementById('table-setup-overlay').classList.add('hidden');
+  const onlineOverlay = document.getElementById('online-setup-overlay');
+  if (onlineOverlay) onlineOverlay.classList.add('hidden');
+  var chatBar = document.getElementById('online-chat-bar');
+  if (chatBar) chatBar.classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
   document.getElementById('rules-overlay').classList.add('hidden');
   updateModeBadge('');
@@ -701,6 +713,9 @@ function startMode(mode) {
   } else if (mode === 'ai') {
     State.set('mode', 'ai'); updateModeBadge('AI对战');
     document.getElementById('ai-setup-overlay').classList.remove('hidden');
+  } else if (mode === 'online') {
+    State.set('mode', 'online'); updateModeBadge('联网对战');
+    if (typeof openOnlineSetup === 'function') openOnlineSetup();
   }
 }
 
@@ -897,6 +912,9 @@ function resetGame() {
     document.getElementById('table-setup-overlay').classList.remove('hidden');
   } else if (game.mode === 'ai') {
     document.getElementById('ai-setup-overlay').classList.remove('hidden');
+  } else if (game.mode === 'online') {
+    if (typeof resetOnlineAfterEnded === 'function') resetOnlineAfterEnded();
+    if (typeof openOnlineSetup === 'function') openOnlineSetup();
   } else if (game.mode === 'solo') {
     startSoloGame();
   }

@@ -32,6 +32,7 @@
 | 🏷 成就标签 | 10 种标签自动判定（三牌封喉、一击必杀、闪电心算等） |
 | 📜 历史面板 | 侧边滑出式对局历史，统计卡 + 最漂亮解法 + 最近记录 |
 | 🔥 连胜追踪 | combo 连胜计数，≥3 连胜特殊标签 |
+| 🌐 联网对战 MVP | Cloudflare Workers + Durable Objects 房间服，支持 2~4 人开房、短线重连、快捷短语 |
 
 ---
 
@@ -43,8 +44,45 @@
 
 ### 系统要求
 - **浏览器**：Chrome 90+ / Edge 90+ / Firefox 90+ / Safari 14+
-- **不需要** 安装任何软件、不需要 Node.js、不需要服务器
+- **单机/围桌/AI 模式不需要** 安装任何软件、不需要 Node.js、不需要服务器
 - **建议** 在平板横屏或电脑上获得最佳体验
+
+### 联网对战开发方式
+
+联网模式需要单独启动 Cloudflare Worker 房间服务：
+
+```powershell
+npm.cmd install
+npm.cmd run dev:worker
+```
+
+本地 Worker 默认地址通常是 `http://localhost:8787`。打开网页后进入“联网对战”，在“服务地址”里填这个地址即可创建/加入房间。
+
+部署到 Cloudflare：
+
+```powershell
+npm.cmd run deploy:worker
+```
+
+前端部署到 Cloudflare Pages：
+
+```powershell
+npm.cmd run build:pages
+```
+
+Pages 项目设置：
+- 构建命令：`npm run build:pages`
+- 输出目录：`dist`
+- 环境变量：`EQ21_ONLINE_URL=https://你的-worker地址.workers.dev`
+
+也可以用 Wrangler 直接发布 Pages：
+
+```powershell
+$env:EQ21_ONLINE_URL="https://你的-worker地址.workers.dev"
+npm.cmd run deploy:pages
+```
+
+> PowerShell 如果拦截 `npm`，请使用 `npm.cmd`。联网服务端只做房间、发牌、提交验算和胜负广播；AI 求解、提示系统仍在浏览器端运行。
 
 ---
 
@@ -60,11 +98,13 @@
 | `js/solver-worker.js` | Web Worker 求解器（后台异步，由 game.js 动态创建） |
 | `js/expression.js` | 表达式求值器、AI求解器、妙解评分 |
 | `js/ui.js` | UI渲染（含围桌模式专用渲染） |
+| `js/online.js` | 联网房间客户端（创建/加入、WebSocket、重连、快捷短语） |
 | `js/game.js` | 游戏逻辑引擎 |
 | `js/history.js` | 历史记录、评分计算、成就标签判定 |
 | `js/main.js` | 入口初始化、事件绑定 |
+| `worker/` | Cloudflare Worker + Durable Object 联网房间服务 |
 | `app.js` | 原始单文件备份（供参考） |
-| `tests/` | 自动化测试（3150+ 用例，含 183 单元 + 2766 Fuzz + 48 静态 + 87 DOM流程 + 28 Worker契约 + 138 性能回归） |
+| `tests/` | 自动化测试（含表达式、Fuzz、静态、DOM、Worker、联网协议和 500 客户端模拟） |
 
 > 各文件详细职责及修改指引见 **[STRUCTURE.md](STRUCTURE.md)**；
 > 架构设计分析与重构方向见 **[ARCHITECTURE.md](ARCHITECTURE.md)**。
@@ -85,7 +125,7 @@
 
 ## ⚠️ 版本限制
 
-- **v3.4+ 支持 Web Worker 异步求解、妙解评分、PWA 离线游玩、围桌多人、3D 牌面动画**；暂不支持联网对战
+- **v3.5+ 支持 Web Worker 异步求解、妙解评分、PWA 离线游玩、围桌多人、3D 牌面动画、联网房间 MVP**
 - 牌值范围为 1~13（A=1, J=11, Q=12, K=13），不含大小王
 - 每局最多 5 张手牌
 - 不支持分数运算（除法结果可以是小数）

@@ -56,8 +56,9 @@ body{
 .header-action:active{transform:scale(.97)}
 .header-action .btn-icon{font-size:1.05em;line-height:1}
 .header-action .btn-text{line-height:1}
-#btn-back{color:var(--text-dim)}
+#btn-back{color:var(--text-dim);min-width:32px;font-weight:700}
 #btn-back:hover{background:rgba(200,170,110,0.2);color:var(--text-bright)}
+#btn-back .btn-icon{font-size:1.25em;font-weight:900}
 
 /* 主容器 */
 #main-container{
@@ -190,6 +191,12 @@ body{
 /* 已翻面的牌 hover */
 .card-shell.is-face-up:hover .card-inner{transform:rotateY(180deg) translateY(-4px);transition:transform 200ms ease,box-shadow 200ms ease}
 .card-shell.is-face-up:hover .card-front{border-color:var(--gold-dim)}
+.card-shell.remote-card-action{animation:remoteCardPulse 480ms ease both}
+@keyframes remoteCardPulse{
+  0%{transform:translateY(0) scale(1);filter:brightness(1)}
+  45%{transform:translateY(-5px) scale(1.04);filter:brightness(1.25) drop-shadow(0 0 8px rgba(201,169,110,.55))}
+  100%{transform:translateY(0) scale(1);filter:brightness(1)}
+}
 
 /* 操作区 */
 .player-actions{display:flex;gap:6px;flex-wrap:wrap}
@@ -320,6 +327,95 @@ body{
 .dialog button:hover{transform:scale(1.03)}
 .dialog button:active{transform:scale(.95)}
 .dialog button.secondary{background:transparent;color:var(--text-dim);border:1px solid var(--gold-dim)}
+
+.online-dialog{max-width:560px}
+.online-join-row{display:flex;gap:8px;margin:8px 0;align-items:center}
+.online-join-row input{
+  flex:1;padding:10px 12px;border:1px solid var(--gold-dim);border-radius:8px;
+  background:#0d1b30;color:var(--gold-light);font-size:1em;text-transform:uppercase;outline:none;
+}
+.online-status{
+  min-height:22px;margin-top:8px;color:var(--text-dim);font-size:.86em;
+}
+.online-status.err{color:#ff9aa8}
+.online-status.info{color:var(--gold-light)}
+.online-lobby{
+  width:100%;display:flex;justify-content:center;align-items:flex-start;padding:18px;
+}
+.online-lobby-panel{
+  width:min(680px,100%);background:var(--surface);border:1px solid rgba(180,150,100,.25);
+  border-radius:var(--radius);box-shadow:0 2px 18px rgba(0,0,0,.35);padding:18px;display:flex;flex-direction:column;gap:14px;
+}
+.online-room-title{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text-bright);font-weight:700}
+.online-room-title strong{
+  font-family:'Consolas','Courier New',monospace;color:var(--gold-light);font-size:1.5em;letter-spacing:2px;
+}
+.online-room-meta{color:var(--text-dim);font-size:.9em}
+.online-seat-list{display:grid;gap:8px}
+.online-seat-row{
+  display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid rgba(180,150,100,.15);
+  border-radius:8px;background:rgba(255,255,255,.025);color:var(--text);
+}
+.online-seat-row.mine{border-color:var(--gold-dim);background:rgba(201,169,110,.08)}
+.online-ready{color:var(--green);font-weight:700}
+.online-offline{color:#888}
+.online-empty{color:var(--text-dim);font-style:italic;font-size:.82em}
+.online-seat-row.empty-seat{
+  opacity:.45;border-style:dashed;background:transparent;
+  color:var(--text-dim);
+}
+
+.btn-ready-active{
+  background:linear-gradient(135deg,var(--green),#2d9d5a)!important;
+  color:#fff!important;
+}
+.online-lobby-actions,.quick-chat-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.online-lobby-actions button,.quick-chat-bar button{
+  padding:9px 14px;border-radius:8px;border:1px solid var(--gold-dim);background:var(--gold);color:#1a1a2e;
+  font-weight:700;cursor:pointer;
+}
+.online-lobby-actions button.secondary,.quick-chat-bar button{
+  background:transparent;color:var(--gold-light);
+}
+.online-lobby-actions button:disabled,.quick-chat-bar button:disabled{opacity:.45;cursor:not-allowed}
+
+.online-seat-header{
+  color:var(--text-dim);font-size:.78em;font-weight:600;
+  padding:2px 4px 6px;border-bottom:1px solid rgba(180,150,100,.12);
+  text-transform:uppercase;letter-spacing:.06em;
+}
+
+.btn-lobby-primary{
+  background:linear-gradient(135deg,var(--gold),#b8944e)!important;color:#1a1a2e!important;
+  padding:11px 22px!important;font-size:.95em!important;font-weight:700!important;
+  border:none!important;border-radius:10px!important;cursor:pointer;min-width:100px;
+}
+.btn-lobby-primary:hover:not(:disabled){filter:brightness(1.1)}
+.btn-lobby-primary:disabled{opacity:.35!important;cursor:not-allowed;filter:none}
+
+.btn-leave-online{
+  background:transparent!important;color:#888;border:1px solid #444!important;
+  padding:6px 10px;font-size:.78em;font-weight:700;border-radius:8px;cursor:pointer;
+  white-space:nowrap;
+}
+.btn-leave-online:hover{background:rgba(120,120,120,.15)!important;color:#aaa}
+
+/* 联网浮动聊天栏 */
+#online-chat-bar{
+  display:flex;gap:6px;justify-content:center;flex-wrap:wrap;
+  padding:8px 12px;margin:0 4px;
+  background:var(--surface);border:1px solid rgba(180,150,100,.2);border-radius:var(--radius);
+}
+#online-chat-bar button{
+  padding:6px 12px;border-radius:20px;border:1px solid var(--gold-dim);
+  background:rgba(180,150,100,.08);color:var(--gold-light);
+  font-weight:600;font-size:.82em;cursor:pointer;white-space:nowrap;
+  transition:background .15s,border-color .15s;
+}
+#online-chat-bar button:hover:not(:disabled){
+  background:rgba(201,169,110,.2);border-color:var(--gold);
+}
+#online-chat-bar button:disabled{opacity:.35;cursor:not-allowed}
 
 .result-icon{font-size:4em;display:block;margin:10px 0}
 
@@ -485,7 +581,27 @@ body{
   .symbol-bar button{padding:8px 10px;font-size:1.05em}
   .player-actions input{font-size:1em}
   #toast-container{bottom:60px}
-  #tabletop-center { display: none; }
+  /* 移动端聊天栏 — 紧凑单行小药丸 */
+  #online-chat-bar{
+    flex-wrap:nowrap;gap:4px;justify-content:flex-start;overflow-x:auto;
+    padding:4px 6px;margin:0 2px;border-radius:8px;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  #online-chat-bar::-webkit-scrollbar{display:none}
+  #online-chat-bar button{
+    flex-shrink:0;padding:4px 10px;font-size:.72em;border-radius:14px;
+  }
+  #tabletop-center {
+    display: flex; flex-direction: row; align-items: center; gap: 12px;
+    padding: 6px 10px; overflow-x: auto;
+  }
+  #tabletop-center .tc-stat { flex-shrink: 0; }
+  #tabletop-center .tc-val { font-size: 0.95em; }
+  #tabletop-center .tc-label { font-size: 0.55em; }
+  #tabletop-center .tc-event {
+    flex: 1; font-size: 0.68em; max-width: none; text-align: right;
+    margin-left: 4px;
+  }
   .player-card.player-top { transform: none; border-radius: var(--radius); }
   .player-card.player-bottom { border-radius: var(--radius); }
   #players-area.tabletop-2p,
@@ -684,6 +800,25 @@ body{
 }
 .history-stat-card .stat-val{font-size:1.2em;font-weight:700;color:var(--gold-light)}
 .history-stat-card .stat-label{font-size:.68em;color:var(--text-dim);margin-top:2px}
+.history-stats-label{text-align:center;font-size:.7em;color:var(--text-dim);margin-bottom:6px;grid-column:1/-1}
+
+/* 单人训练统计 */
+#history-stats-solo{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin-top:8px;padding-top:8px;border-top:1px dashed rgba(180,150,100,0.15);
+}
+
+/* 难度筛选标签 */
+.history-diff-filter{
+  display:flex;gap:4px;margin:10px 0 6px;justify-content:center;
+}
+.diff-tag{
+  padding:2px 10px;border-radius:10px;font-size:.7em;font-weight:600;
+  background:rgba(180,150,100,0.08);color:rgba(180,150,100,0.6);
+  border:1px solid rgba(180,150,100,0.12);cursor:pointer;transition:all .15s;
+}
+.diff-tag:hover{background:rgba(180,150,100,0.15);color:rgba(180,150,100,0.85)}
+.diff-tag.active{background:rgba(180,150,100,0.2);color:var(--gold);border-color:rgba(180,150,100,0.3)}
 
 /* 最佳解法 */
 .history-best{
@@ -804,6 +939,7 @@ body{
   background: var(--surface);
   border-top: 1px solid rgba(180,150,100,0.18);
   border-bottom: 1px solid rgba(180,150,100,0.18);
+  overflow: hidden;
 }
 #tabletop-center .tc-stat { text-align: center; }
 #tabletop-center .tc-val {
@@ -833,6 +969,13 @@ body{
 .expr-display:empty::after {
   content: '组合算式 = 21';
   color: #445566;
+}
+
+.expr-display.remote-expr-action{animation:remoteExprPulse 420ms ease both}
+@keyframes remoteExprPulse{
+  0%{border-color:var(--gold-dim);box-shadow:none}
+  45%{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,169,110,.16)}
+  100%{border-color:var(--gold-dim);box-shadow:none}
 }
 
 #players-area.tabletop-2p .player-card,

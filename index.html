@@ -33,7 +33,7 @@
       <button id="btn-rules" class="header-action" onclick="showRules()" title="游戏规则" aria-label="游戏规则"><span class="btn-icon">📖</span><span class="btn-text">规则</span></button>
       <button id="btn-sound" class="header-action" title="音效开关" aria-label="音效开关"><span class="btn-icon">🔊</span></button>
       <button id="btn-history" class="header-action" title="对局历史" aria-label="对局历史"><span class="btn-icon">📜</span></button>
-      <button id="btn-back" class="header-action" onclick="goToMenu()" title="返回菜单" aria-label="返回菜单"><span class="btn-icon">←</span><span class="btn-text">菜单</span></button>
+      <button id="btn-back" class="header-action" onclick="goToMenu()" title="返回" aria-label="返回"><span class="btn-icon">⟵</span></button>
     </div>
   </div>
 </div>
@@ -52,6 +52,7 @@
     <div class="tc-stat"><div class="tc-val" style="color:var(--gold)">21</div><div class="tc-label">目标</div></div>
     <div class="tc-event" id="tc-event"></div>
   </div>
+  <div id="online-chat-bar" class="hidden"></div>
   <section id="log-shell" class="log-shell">
     <button id="btn-log-toggle" class="log-toggle" type="button" aria-expanded="true" aria-controls="log-panel" title="展开或折叠日志" aria-label="展开或折叠日志">
       <span class="log-toggle-title">日志</span>
@@ -96,10 +97,10 @@
         <span class="label">AI对战</span>
         <span class="desc">挑战不同级别的AI</span>
       </div>
-      <div class="menu-card locked" id="btn-online">        <span class="icon" style="color:var(--text-dim);opacity:0.5">♣</span>
+      <div class="menu-card" id="btn-online">        <span class="icon" style="color:var(--green)">♣</span>
         <span class="label">联网对战</span>
-        <span class="tag tag-coming">敬请期待</span>
-        <span class="desc">2~4人在线对战</span>
+        <span class="tag tag-new">MVP</span>
+        <span class="desc">开房邀请，2~4人在线</span>
       </div>
     </div>
     <p style="color:var(--text);font-weight:600;margin-top:10px">选择难度</p>
@@ -234,6 +235,29 @@
   </div>
 </div>
 
+<!-- 联网模式设置弹窗 -->
+<div id="online-setup-overlay" class="overlay hidden">
+  <div class="dialog online-dialog">
+    <h2>♣ 联网对战</h2>
+    <div class="row online-url-row" style="display:none"><label>服务地址</label><input type="text" id="online-base-url" placeholder="http://localhost:8787"></div>
+    <div class="row"><label>昵称</label><input type="text" id="online-player-name" value="玩家" maxlength="12"></div>
+    <p style="color:var(--text);font-weight:600;margin-top:10px">房间人数</p>
+    <div class="choice-grid online-player-grid">
+      <div class="choice-card online-player-opt" data-players="2"><span class="ch-title">2人</span><span class="ch-cards">双人快局</span></div>
+      <div class="choice-card online-player-opt" data-players="3"><span class="ch-title">3人</span><span class="ch-cards">小桌混战</span></div>
+      <div class="choice-card selected online-player-opt" data-players="4"><span class="ch-title">4人</span><span class="ch-cards">年会小桌</span></div>
+    </div>
+    <button id="btn-create-online" aria-label="创建联网房间">创建房间</button>
+    <div class="online-join-row">
+      <input type="text" id="online-room-code" placeholder="输入房间码" maxlength="8">
+      <button id="btn-join-online" aria-label="加入联网房间">加入</button>
+    </div>
+    <button class="secondary" id="btn-online-reconnect" aria-label="重连上次房间">重连上次房间</button>
+    <button class="secondary" id="btn-online-back" aria-label="返回菜单">返回菜单</button>
+    <div id="online-status" class="online-status"></div>
+  </div>
+</div>
+
 <!-- 结果弹窗 -->
 <div id="result-overlay" class="overlay hidden">
   <div class="dialog">
@@ -261,7 +285,14 @@
   <div class="history-body">
     <div class="history-stats" id="history-stats"></div>
     <div class="history-solo-note" id="history-solo-note" style="display:none"></div>
+    <div class="history-stats" id="history-stats-solo" style="display:none"></div>
     <div class="history-best" id="history-best"></div>
+    <div class="history-diff-filter" id="history-diff-filter" style="display:none">
+      <button class="diff-tag active" data-diff="all">全部</button>
+      <button class="diff-tag" data-diff="easy">简单</button>
+      <button class="diff-tag" data-diff="normal">普通</button>
+      <button class="diff-tag" data-diff="hard">困难</button>
+    </div>
     <div class="history-records" id="history-records"></div>
   </div>
 </div>
@@ -270,6 +301,8 @@
 <script src="js/expression.js"></script>
 <script src="js/history.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/deploy-config.js"></script>
+<script src="js/online.js"></script>
 <script src="js/game.js"></script>
 <script src="js/main.js"></script>
 <script>

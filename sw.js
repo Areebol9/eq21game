@@ -1,4 +1,4 @@
-const CACHE = 'equation21-v4';
+const CACHE = 'equation21-v6';
 const FILES = [
   './index.html',
   './style.css',
@@ -8,6 +8,7 @@ const FILES = [
   './js/solver-worker.js',
   './js/history.js',
   './js/ui.js',
+  './js/online.js',
   './js/game.js',
   './js/main.js'
 ];

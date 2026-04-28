@@ -22,7 +22,20 @@ const game = {
   solutionWorker: null,
   solutionTaskId: 0,
   coolHintUsed: false,
-  soundEnabled: true
+  soundEnabled: true,
+  online: {
+    baseUrl: '',
+    roomCode: '',
+    playerId: '',
+    seatToken: '',
+    connected: false,
+    connecting: false,
+    reconnecting: false,
+    isHost: false,
+    maxPlayers: 4,
+    status: '',
+    lastSnapshotAt: 0
+  }
 };
 
 const SOLVE_BUDGETS = {

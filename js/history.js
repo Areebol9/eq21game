@@ -173,7 +173,7 @@ function addRecord(record) {
   if (data.records.length > 200) {
     data.records = data.records.slice(-200);
   }
-  saveHistory(data);
+  return saveHistory(data);
 }
 
 function clearHistory() {
@@ -230,7 +230,8 @@ function formatDate(ts) {
 
 // ==================== UI 渲染 ====================
 // mode 标签映射
-var MODE_LABELS = { solo: '\uD83C\uDFCB\uFE0F\u8BAD\u7EC3', ai: '\uD83C\uDFAFAI\u5BF9\u6218', local: '\uD83D\uDC65\u672C\u5730\u591A\u4EBA' };
+var MODE_LABELS = { solo: '\uD83C\uDFCB\uFE0F\u8BAD\u7EC3', ai: '\uD83C\uDFAFAI\u5BF9\u6218', local: '\uD83D\uDC65\u672C\u5730\u591A\u4EBA', online: '\uD83C\uDF10\u8054\u7F51\u5BF9\u6218' };
+var _historyDiff = 'all';
 
 function renderHistoryPanel() {
   const data = loadHistory();
@@ -239,7 +240,8 @@ function renderHistoryPanel() {
   const soloCount = records.length - compRecords.length;
   const stats = getStats(records, 'competitive');
   const best = getBestRecord(records);
-  const recent = getRecentRecords(records, 20);
+  const filtered = _historyDiff !== 'all' ? records.filter(function(r) { return r.difficulty === _historyDiff; }) : records;
+  const recent = getRecentRecords(filtered, 20);
 
   // 当前活跃玩家连胜
   const recentWin = records.slice().reverse().find(r => r.result === 'win');
@@ -255,14 +257,19 @@ function renderHistoryPanel() {
       '<div class="history-stat-card"><div class="stat-val">⚡' + formatHistoryTime(stats.fastestSec) + '</div><div class="stat-label">最快</div></div>';
   }
 
-  // 训练记录提示
-  const soloNote = document.getElementById('history-solo-note');
-  if (soloNote) {
-    if (soloCount > 0) {
-      soloNote.textContent = '📋 训练记录 ' + soloCount + ' 局（不计入统计）';
-      soloNote.style.display = '';
+  // 单人训练统计
+  const soloStatsEl = document.getElementById('history-stats-solo');
+  if (soloStatsEl) {
+    const soloRecords = records.filter(function(r) { return r.mode === 'solo'; });
+    if (soloRecords.length > 0) {
+      const sStats = getStats(soloRecords);
+      soloStatsEl.innerHTML = '<div class="history-stats-label">📋 单人训练</div>' +
+        '<div class="history-stat-card"><div class="stat-val">' + sStats.totalGames + '</div><div class="stat-label">训练局</div></div>' +
+        '<div class="history-stat-card"><div class="stat-val">⭐' + sStats.highestScore + '</div><div class="stat-label">最高</div></div>' +
+        '<div class="history-stat-card"><div class="stat-val">⚡' + formatHistoryTime(sStats.fastestSec) + '</div><div class="stat-label">最快</div></div>';
+      soloStatsEl.style.display = '';
     } else {
-      soloNote.style.display = 'none';
+      soloStatsEl.style.display = 'none';
     }
   }
 
@@ -301,6 +308,25 @@ function renderHistoryPanel() {
     bestEl.innerHTML = bestHtml;
   } else if (bestEl) {
     bestEl.innerHTML = '<div class="best-title">🏆 最漂亮解法</div><div class="history-empty">暂无竞技记录</div>';
+  }
+
+  // 难度筛选
+  const diffFilter = document.getElementById('history-diff-filter');
+  if (diffFilter) {
+    if (records.length > 0) {
+      diffFilter.style.display = '';
+      var activeDiff = _historyDiff || 'all';
+      var diffTags = diffFilter.querySelectorAll('.diff-tag');
+      for (var d = 0; d < diffTags.length; d++) {
+        diffTags[d].classList.toggle('active', diffTags[d].dataset.diff === activeDiff);
+        diffTags[d].onclick = function() {
+          _historyDiff = this.dataset.diff;
+          renderHistoryPanel();
+        };
+      }
+    } else {
+      diffFilter.style.display = 'none';
+    }
   }
 
   // 最近记录

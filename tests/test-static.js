@@ -82,6 +82,12 @@ assert("index.html references at least one stylesheet", stylesheets.length > 0);
 assert("index.html references manifest.json", manifests.includes("./manifest.json") || manifests.includes("manifest.json"));
 assert("index.html references game scripts", scripts.length >= 6, `found ${scripts.length}`);
 assert("index.html registers sw.js", swRegs.includes("./sw.js") || swRegs.includes("sw.js"));
+assert("index.html loads deploy config before online client",
+  scripts.indexOf("js/deploy-config.js") !== -1 &&
+  scripts.indexOf("js/online.js") !== -1 &&
+  scripts.indexOf("js/deploy-config.js") < scripts.indexOf("js/online.js"),
+  `scripts: ${scripts.join(", ")}`
+);
 
 for (const href of stylesheets) checkExists(href, "stylesheet exists");
 for (const href of manifests) checkExists(href, "manifest exists");
@@ -119,10 +125,12 @@ assert("sw.js declares FILES cache list", !!filesMatch);
 const swFiles = filesMatch ? extractAll(/["']([^"']+)["']/g, filesMatch[1]) : [];
 assert("sw.js caches index.html", swFiles.includes("./index.html"));
 assert("sw.js caches manifest.json", swFiles.includes("./manifest.json"));
+assert("sw.js does not precache deploy config", !swFiles.includes("./js/deploy-config.js"));
 
 for (const file of swFiles) checkExists(file, "sw cache entry exists");
 
 for (const href of stylesheets.concat(manifests, scripts)) {
+  if (href.replace(/^\.\//, "") === "js/deploy-config.js") continue;
   const normalized = href.startsWith("./") ? href : "./" + href;
   assert(`sw cache includes ${href}`, swFiles.includes(normalized), `missing ${normalized} from FILES`);
 }

@@ -8,7 +8,7 @@ function init() {
   document.getElementById('btn-solo').onclick = () => startMode('solo');
   document.getElementById('btn-local').onclick = () => startMode('local');
   document.getElementById('btn-ai').onclick = () => startMode('ai');
-  document.getElementById('btn-online').onclick = showComingSoon;
+  document.getElementById('btn-online').onclick = () => startMode('online');
   document.getElementById('btn-rules').onclick = showRules;
   document.getElementById('btn-back').onclick = goToMenu;
 
@@ -40,6 +40,15 @@ function init() {
   });
   document.getElementById('btn-start-ai').onclick = startAiGame;
   document.getElementById('btn-ai-back').onclick = goToMenu;
+
+  // 联网对战
+  document.querySelectorAll('.online-player-opt').forEach(c => {
+    c.onclick = () => selectOnlinePlayers(c.dataset.players);
+  });
+  document.getElementById('btn-create-online').onclick = createOnlineRoom;
+  document.getElementById('btn-join-online').onclick = joinOnlineRoom;
+  document.getElementById('btn-online-reconnect').onclick = reconnectOnlineRoom;
+  document.getElementById('btn-online-back').onclick = closeOnlineSetup;
 
   // 结果弹窗
   document.getElementById('btn-again').onclick = resetGame;

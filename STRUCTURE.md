@@ -19,15 +19,22 @@ equation-21-simple/
 │   ├── test-static.js      # 48 条静态测试（资源引用、PWA、JS 语法）
 │   ├── test-dom-flow.js    # 87 条 fake DOM 流程测试（围桌入口、历史、Worker stale）
 │   ├── test-worker-flow.js # 28 条 Worker 契约测试（妙解返回、超时边界）
+│   ├── test-online-room-core.js # 联网房间核心状态机测试
+│   ├── test-online-protocol.js  # 联网协议/多客户端流程测试
+│   ├── test-online-load.js      # 500 客户端 / 125 房间模拟压测
 │   ├── test-solver-perf.js # 性能回归测试（默认 138 样本，支持 --stress）
 │   ├── _bench_6332J.js     # 6332J 手牌微基准测试
 │   └── BUG_REPORT.md       # Bug 修复记录
+├── worker/
+│   ├── index.js            # Cloudflare Worker + Durable Object 入口
+│   └── room-core.cjs       # 联网房间规则核心（可直接 Node 测试）
 └── js/
     ├── config.js           # 全局状态 & 运算符注册表 & 音效
     ├── expression.js       # 表达式求值器 & AI求解器 & 妙解评分
     ├── solver-worker.js    # Web Worker 求解器（由 game.js 动态创建，非 <script> 加载）
     ├── history.js          # 历史记录 & 评分系统
     ├── ui.js               # UI渲染函数
+    ├── online.js           # 联网客户端（房间、WebSocket、重连、快捷短语）
     ├── game.js             # 游戏逻辑引擎 & Worker 管理
     └── main.js             # 入口初始化 & 事件绑定
 ```
@@ -155,6 +162,32 @@ equation-21-simple/
 
 ---
 
+### `js/online.js` — 联网客户端
+
+| 函数 | 职责 |
+|------|------|
+| `openOnlineSetup()` | 打开联网创建/加入房间弹层 |
+| `createOnlineRoom()` / `joinOnlineRoom()` | 调用 Worker API 创建房间或连接房间 |
+| `connectOnlineRoom()` | 建立 WebSocket，发送 join，处理短线重连 |
+| `applyOnlineSnapshot()` | 将服务端房间快照映射到前端 `game` 状态 |
+| `onlineSubmitFormula()` 等 | 将玩家操作发送为 WebSocket action |
+
+> **什么情况改这里**：调整联网 UI 流程、WebSocket 协议字段、重连策略、快捷短语。
+
+---
+
+### `worker/` — Cloudflare 联网房间服务
+
+| 文件 | 职责 |
+|------|------|
+| `worker/index.js` | Worker 路由：`POST /api/rooms`、`GET /ws/:roomCode`，Durable Object 广播 |
+| `worker/room-core.cjs` | 纯规则核心：房间创建、加入、准备、开局、发牌、提交验算、认输、快捷短语 |
+| `wrangler.toml` | Cloudflare Worker / Durable Object 部署配置 |
+
+> **什么情况改这里**：修改服务端权威状态、房间协议、部署绑定或压测目标。
+
+---
+
 ### `js/solver-worker.js` — Web Worker 求解器
 
 | 内容 | 说明 |
@@ -186,8 +219,9 @@ equation-21-simple/
 <script src="js/expression.js"></script>   <!-- 2. → config.js -->
 <script src="js/history.js"></script>      <!-- 3. → config.js -->
 <script src="js/ui.js"></script>           <!-- 4. → config.js + expression.js -->
-<script src="js/game.js"></script>         <!-- 5. → config.js + expression.js + ui.js + history.js -->
-<script src="js/main.js"></script>         <!-- 6. → 所有以上文件 -->
+<script src="js/online.js"></script>       <!-- 5. → config.js + ui.js + history.js -->
+<script src="js/game.js"></script>         <!-- 6. → config.js + expression.js + ui.js + history.js -->
+<script src="js/main.js"></script>         <!-- 7. → 所有以上文件 -->
 ```
 
 每个文件只依赖排在前面的文件，无循环依赖。
@@ -208,6 +242,7 @@ equation-21-simple/
 | 加音效 | `config.js`（soundPlay 定义）+ `game.js`（音效触发点） |
 | 改表达式求值 bug | `expression.js`（tokenize/求值管线） |
 | 加新的游戏模式 | `index.html`（设置弹层 DOM）+ `config.js`（状态字段）+ `game.js`（流程函数）+ `ui.js`（renderXxx 渲染函数）+ `main.js`（入口绑定） |
+| 改联网房间逻辑 | `worker/room-core.cjs`（规则）+ `worker/index.js`（广播/存储）+ `js/online.js`（客户端协议） |
 | 调整评分公式 | `history.js`（computeScore） |
 | 新增成就标签 | `history.js`（computeTags）+ `style.css`（.tag-pill 样式） |
 | 改历史存储结构 | `history.js`（saveRecord/loadHistory） |
@@ -218,8 +253,8 @@ equation-21-simple/
 
 | 约束 | 说明 |
 |------|------|
-| 零外部依赖 | 纯 HTML+CSS+JS，不需要 Node.js/npm/打包 |
+| 单机零外部依赖 | 单机/围桌/AI 为纯 HTML+CSS+JS；联网 Worker 开发需要 Node/npm + Wrangler |
 | 全局作用域 | 通过 `<script>` 加载顺序共享变量，不使用 ES Module |
 | 浏览器直接打开 | 不依赖本地服务器（file:// 下 SW 不可用，需 http://） |
-| 自动化测试 | `node tests/test-expression.js && node tests/test-fuzz.js && node tests/test-static.js && node tests/test-dom-flow.js && node tests/test-worker-flow.js && node tests/test-solver-perf.js` |
+| 自动化测试 | `npm.cmd test` 或逐个运行 `tests/` 下脚本 |
 | 保留备份 | `app.js` 保留原始单文件代码 |

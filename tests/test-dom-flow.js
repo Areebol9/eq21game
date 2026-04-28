@@ -19,6 +19,7 @@ const SCRIPT_ORDER = [
   "js/expression.js",
   "js/history.js",
   "js/ui.js",
+  "js/online.js",
   "js/game.js",
   "js/main.js",
 ];
@@ -130,6 +131,12 @@ class FakeElement {
     this._innerHTML = String(value);
     this._textContent = "";
     this.children = [];
+    const cardMatch = this._innerHTML.match(/^<div class="(card-shell[^"]*)"/);
+    if (cardMatch) {
+      const card = new FakeElement(this.ownerDocument, "div");
+      card.className = cardMatch[1];
+      this.appendChild(card);
+    }
   }
 
   get firstElementChild() {
@@ -315,8 +322,12 @@ function createDocument() {
     "btn-back",
     "btn-rules", "btn-close-rules", "rules-overlay", "btn-start-table",
     "btn-table-back", "btn-start-ai", "btn-ai-back", "btn-again", "btn-menu",
+    "online-setup-overlay", "online-base-url", "online-player-name",
+    "online-room-code", "btn-create-online", "btn-join-online",
+    "btn-online-reconnect", "btn-online-back", "online-status",
     "btn-sound", "btn-history", "btn-history-close", "btn-history-clear",
     "log-shell", "btn-log-toggle", "log-toggle-count",
+    "main-container",
     "menu-overlay", "table-setup-overlay", "ai-setup-overlay", "result-overlay",
     "hint-area", "stats-panel", "players-area", "tabletop-center", "log-panel",
     "footer-bar", "toast-container", "victory-overlay", "table-name-inputs",
@@ -326,7 +337,7 @@ function createDocument() {
     "mode-badge", "diff-badge", "tc-timer", "tc-deck"
   ].forEach(id => makeElement(doc, id));
 
-  ["rules-overlay", "table-setup-overlay", "ai-setup-overlay", "result-overlay", "hint-area", "stats-panel", "history-panel"].forEach(id => {
+  ["rules-overlay", "table-setup-overlay", "ai-setup-overlay", "online-setup-overlay", "result-overlay", "hint-area", "stats-panel", "history-panel"].forEach(id => {
     doc.getElementById(id).classList.add("hidden");
   });
 
@@ -349,12 +360,18 @@ function createDocument() {
     el.dataset.players = count;
   });
 
+  ["2", "3", "4"].forEach((count, idx) => {
+    const el = makeElement(doc, "", "div", "choice-card online-player-opt" + (idx === 2 ? " selected" : ""));
+    el.dataset.players = count;
+  });
+
   return doc;
 }
 
 function createEnv(options = {}) {
   const document = createDocument();
-  const storage = new Map();
+  const storage = options.localStorage || new Map();
+  const sessionStore = options.sessionStorage || new Map();
   let confirmCount = 0;
   let timerId = 0;
   const isMobile = !!options.mobile;
@@ -367,7 +384,7 @@ function createEnv(options = {}) {
       webkitAudioContext: null,
       innerWidth: isMobile ? 375 : 1024,
       innerHeight: isMobile ? 667 : 768,
-      location: { search: options.debugPerf ? "?debug=perf" : "" },
+      location: { search: options.debugPerf ? "?debug=perf" : "", protocol: "http:", origin: "http://localhost:8000" },
       matchMedia(query) {
         return {
           media: query,
@@ -385,6 +402,12 @@ function createEnv(options = {}) {
       setItem(key, value) { storage.set(key, String(value)); },
       removeItem(key) { storage.delete(key); },
       clear() { storage.clear(); }
+    },
+    sessionStorage: {
+      getItem(key) { return sessionStore.has(key) ? sessionStore.get(key) : null; },
+      setItem(key, value) { sessionStore.set(key, String(value)); },
+      removeItem(key) { sessionStore.delete(key); },
+      clear() { sessionStore.clear(); }
     },
     confirm() { confirmCount++; return true; },
     alert() {},
@@ -410,6 +433,7 @@ function createEnv(options = {}) {
     ctx,
     document,
     storage,
+    sessionStore,
     getConfirmCount: () => confirmCount,
     run(code) {
       return vm.runInContext(code, ctx);
@@ -485,6 +509,279 @@ section("header buttons, keyboard activation, and log collapse");
   env.run("addLog('third', 'info');");
   assert("collapsed log still accepts new entries", env.document.getElementById("log-panel").children.length, 3);
   assert("collapsed log count still updates", env.document.getElementById("log-toggle-count").textContent, "3");
+}
+
+section("online setup opens without touching local game state");
+{
+  const env = createEnv();
+  env.run("init()");
+
+  env.document.getElementById("btn-online").onclick();
+
+  assert("online button switches mode", env.run("game.mode"), "online");
+  assert("online setup is visible", env.document.getElementById("online-setup-overlay").classList.contains("hidden"), false);
+  assert("online setup hides menu", env.document.getElementById("menu-overlay").classList.contains("hidden"), true);
+  assert("online default service URL is filled", env.document.getElementById("online-base-url").value, "http://localhost:8000");
+  assert("online create button is bound", typeof env.document.getElementById("btn-create-online").onclick, "function");
+
+  const two = env.document.querySelector(".online-player-opt[data-players='2']");
+  two.onclick();
+  assert("online player count selector updates", env.document.querySelector(".online-player-opt.selected").dataset.players, "2");
+}
+
+section("online tabletop uses current player relative perspective");
+{
+  const env = createEnv();
+  env.run(`
+    init();
+    game.mode = 'online';
+    game.phase = 'playing';
+    game.difficulty = 'easy';
+    game.target = 21;
+    game.deck = [1, 2, 3, 4];
+    game.online.playerId = 'p2';
+    game.online.connected = true;
+    game.players = [
+      { id: 'host', name: 'Host', hand: [10, 10, 1], connected: true, ready: true, conceded: false, feedback: '', feedbackType: '', inputDraft: '' },
+      { id: 'p2', name: 'P2', hand: [7, 7, 7], connected: true, ready: true, conceded: false, feedback: '', feedbackType: '', inputDraft: '' }
+    ];
+    renderAll();
+  `);
+
+  const mine = env.document.querySelector(".player-card[data-index='1']");
+  const host = env.document.querySelector(".player-card[data-index='0']");
+  assert("current player card exists", !!mine, true);
+  assert("opponent card exists", !!host, true);
+  assert("current player is bottom / upright", mine.classList.contains("player-bottom"), true);
+  assert("current player is not rotated", mine.style.transform || "", "");
+  assert("opponent is top", host.classList.contains("player-top"), true);
+  assert("opponent is rotated", host.style.transform, "rotate(180deg)");
+  assert("current player keeps own action buttons enabled", mine.querySelector(".btn-submit").disabled, false);
+  assert("opponent action buttons are disabled", host.querySelector(".btn-submit").disabled, true);
+}
+
+section("online presence shares opponent draft and card taps");
+{
+  const env = createEnv();
+  env.run(`
+    init();
+    game.mode = 'online';
+    game.phase = 'playing';
+    game.difficulty = 'easy';
+    game.target = 21;
+    game.deck = [1, 2, 3, 4];
+    game.online.playerId = 'p2';
+    game.online.connected = true;
+    game.players = [
+      { id: 'host', name: 'Host', hand: [10, 10, 1], connected: true, ready: true, conceded: false, feedback: '', feedbackType: '', inputDraft: '' },
+      { id: 'p2', name: 'P2', hand: [7, 7, 7], connected: true, ready: true, conceded: false, feedback: '', feedbackType: '', inputDraft: '' }
+    ];
+    var __sent = [];
+    onlineSocket = { readyState: 1, send: function(text) { __sent.push(JSON.parse(text)); } };
+    renderAll();
+  `);
+
+  env.run("tableAppendExpr(1, '7', { action: 'card', cardIndex: 0 });");
+  const sent = env.run("__sent[0]");
+  assert("local card tap sends draft update", sent.type, "draft_update");
+  assert("draft update carries expression", sent.payload.draft, "7");
+  assert("draft update carries card index", sent.payload.cardIndex, 0);
+
+  env.run(`
+    handleOnlineMessage(JSON.stringify({ type: 'presence_update', playerId: 'host', draft: '10+10', action: 'card', cardIndex: 1, seq: 1 }));
+  `);
+  const host = env.document.querySelector(".player-card[data-index='0']");
+  assert("opponent presence updates draft", host.querySelector(".expr-display").textContent, "10+10");
+  const tapped = host.querySelectorAll(".card-shell")[1];
+  assert("opponent card tap keeps card face up", tapped.classList.contains("is-face-up"), true);
+  assert("opponent card tap never turns card face down", tapped.classList.contains("is-face-down"), false);
+  assert("opponent card tap animation does not persist in player state", env.run("game.players[0]._remoteCardPulse === undefined"), true);
+  assert("opponent card tap animation class is temporary", tapped.classList.contains("remote-card-action"), false);
+
+  env.run(`
+    game.players[1].inputDraft = '7';
+    handleOnlineMessage(JSON.stringify({ type: 'presence_update', playerId: 'p2', draft: 'wrong', action: 'typing', seq: 99 }));
+  `);
+  assert("current player ignores own presence echo", env.run("game.players[1].inputDraft"), "7");
+
+  env.run(`
+    handleOnlineMessage(JSON.stringify({ type: 'presence_update', playerId: 'host', draft: 'stale', action: 'typing', seq: 1 }));
+  `);
+  assert("stale opponent presence is ignored", env.run("game.players[0].inputDraft"), "10+10");
+}
+
+section("online ended reconnect does not reopen result or duplicate history");
+{
+  const env = createEnv();
+  env.run(`
+    init();
+    var __showResults = 0;
+    var __winSounds = 0;
+    var __victoryEffects = 0;
+    showResult = function() { __showResults++; document.getElementById('result-overlay').classList.remove('hidden'); };
+    soundPlay = function(type) { if (type === 'win') __winSounds++; };
+    triggerVictoryEffect = function() { __victoryEffects++; };
+    addLog = function() {};
+    showToast = function() {};
+    function makeOnlineRoom(phase, version) {
+      return {
+        schemaVersion: 1,
+        roomCode: 'ROOM42',
+        phase: phase,
+        difficulty: 'easy',
+        target: 21,
+        maxPlayers: 2,
+        maxCards: 5,
+        hostId: 'host',
+        winnerId: phase === 'ended' ? 'p2' : null,
+        startedAt: 100000,
+        endedAt: phase === 'ended' ? 121000 : null,
+        deckCount: 10,
+        version: version,
+        events: [],
+        you: { playerId: 'p2', seatToken: 'p2-token', isHost: false },
+        players: [
+          { id: 'host', name: 'Host', hand: [10, 10, 1], connected: true, ready: true, conceded: false, host: true, feedback: '', feedbackType: '' },
+          { id: 'p2', name: 'P2', hand: [7, 7, 7], connected: true, ready: true, conceded: false, host: false, feedback: phase === 'ended' ? 'win' : '', feedbackType: phase === 'ended' ? 'ok' : '' }
+        ]
+      };
+    }
+    applyOnlineSnapshot(makeOnlineRoom('playing', 8));
+    applyOnlineSnapshot(makeOnlineRoom('ended', 9));
+  `);
+
+  let history = JSON.parse(env.storage.get("eq21_history"));
+  assert("live online ending opens result once", env.run("__showResults"), 1);
+  assert("live online ending plays win sound once", env.run("__winSounds"), 1);
+  assert("live online ending triggers victory effect once", env.run("__victoryEffects"), 1);
+  assert("live online ending writes one history record", history.records.length, 1);
+  assert("online history stores stable result key", history.records[0].onlineResultKey, "ROOM42:9:p2");
+  assert("online result key is persisted", env.storage.has("eq21_online_result_ROOM42:9:p2"), true);
+
+  env.run("handleOnlineMessage(JSON.stringify({ type: 'game_ended', room: makeOnlineRoom('ended', 9) }));");
+  history = JSON.parse(env.storage.get("eq21_history"));
+  assert("duplicate ended message does not reopen result", env.run("__showResults"), 1);
+  assert("duplicate ended message does not duplicate history", history.records.length, 1);
+  env.run("resetGame();");
+  assert("online again clears ended room session", env.run("loadOnlineSession() === null"), true);
+  assert("online again disables reconnect button", env.document.getElementById("btn-online-reconnect").disabled, true);
+  assert("online again returns to online setup", env.document.getElementById("online-setup-overlay").classList.contains("hidden"), false);
+
+  const reconnectEnv = createEnv();
+  reconnectEnv.run(`
+    init();
+    var __showResults = 0;
+    showResult = function() { __showResults++; document.getElementById('result-overlay').classList.remove('hidden'); };
+    soundPlay = function() {};
+    triggerVictoryEffect = function() {};
+    addLog = function() {};
+    showToast = function() {};
+    applyOnlineSnapshot({
+      schemaVersion: 1,
+      roomCode: 'ROOM43',
+      phase: 'ended',
+      difficulty: 'easy',
+      target: 21,
+      maxPlayers: 2,
+      maxCards: 5,
+      hostId: 'host',
+      winnerId: 'p2',
+      startedAt: 100000,
+      endedAt: 121000,
+      deckCount: 10,
+      version: 3,
+      events: [],
+      you: { playerId: 'p2', seatToken: 'p2-token', isHost: false },
+      players: [
+        { id: 'host', name: 'Host', hand: [10, 10, 1], connected: true, ready: true, conceded: false, host: true, feedback: '', feedbackType: '' },
+        { id: 'p2', name: 'P2', hand: [7, 7, 7], connected: true, ready: true, conceded: false, host: false, feedback: 'win', feedbackType: 'ok' }
+      ]
+    });
+  `);
+  assert("reconnect into ended room does not open result", reconnectEnv.run("__showResults"), 0);
+  assert("reconnect into ended room renders ended phase", reconnectEnv.run("game.phase"), "ended");
+  assert("reconnect into ended room does not write history", reconnectEnv.run("loadHistory().records.length"), 0);
+
+  const endedErrorEnv = createEnv();
+  endedErrorEnv.run(`
+    init();
+    saveOnlineSession({ baseUrl: 'http://localhost:8787', roomCode: 'ROOM45', playerId: 'p2', seatToken: 'p2-token', name: 'P2' });
+    game.mode = 'online';
+    game.online.roomCode = 'ROOM45';
+    handleOnlineMessage(JSON.stringify({ type: 'error', code: 'room_ended', error: 'room_ended' }));
+  `);
+  assert("room_ended error closes old room locally", endedErrorEnv.storage.has("eq21_online_closed_ROOM45"), true);
+  assert("room_ended error clears saved session", endedErrorEnv.run("loadOnlineSession() === null"), true);
+  assert("room_ended error disables reconnect", endedErrorEnv.document.getElementById("btn-online-reconnect").disabled, true);
+
+  const existingEnv = createEnv();
+  existingEnv.storage.set("eq21_history", JSON.stringify({
+    version: 1,
+    records: [{ id: "old", mode: "online", player: "P2", result: "win", onlineResultKey: "ROOM44:9:p2" }]
+  }));
+  existingEnv.run(`
+    init();
+    var __showResults = 0;
+    showResult = function() { __showResults++; };
+    soundPlay = function() {};
+    triggerVictoryEffect = function() {};
+    addLog = function() {};
+    showToast = function() {};
+    function makeOnlineRoom44(phase, version) {
+      return {
+        schemaVersion: 1,
+        roomCode: 'ROOM44',
+        phase: phase,
+        difficulty: 'easy',
+        target: 21,
+        maxPlayers: 2,
+        maxCards: 5,
+        hostId: 'host',
+        winnerId: phase === 'ended' ? 'p2' : null,
+        startedAt: 100000,
+        endedAt: phase === 'ended' ? 121000 : null,
+        deckCount: 10,
+        version: version,
+        events: [],
+        you: { playerId: 'p2', seatToken: 'p2-token', isHost: false },
+        players: [
+          { id: 'host', name: 'Host', hand: [10, 10, 1], connected: true, ready: true, conceded: false, host: true, feedback: '', feedbackType: '' },
+          { id: 'p2', name: 'P2', hand: [7, 7, 7], connected: true, ready: true, conceded: false, host: false, feedback: phase === 'ended' ? 'win' : '', feedbackType: phase === 'ended' ? 'ok' : '' }
+        ]
+      };
+    }
+    applyOnlineSnapshot(makeOnlineRoom44('playing', 8));
+    applyOnlineSnapshot(makeOnlineRoom44('ended', 9));
+  `);
+  assert("existing online result key still allows live result UI", existingEnv.run("__showResults"), 1);
+  assert("existing online result key prevents duplicate history", existingEnv.run("loadHistory().records.length"), 1);
+}
+
+section("online session prefers current window over shared localStorage");
+{
+  const sharedLocal = new Map();
+  const hostSession = new Map();
+  const p2Session = new Map();
+  const hostEnv = createEnv({ localStorage: sharedLocal, sessionStorage: hostSession });
+  const p2Env = createEnv({ localStorage: sharedLocal, sessionStorage: p2Session });
+
+  hostEnv.run(`
+    saveOnlineSession({ baseUrl: 'http://localhost:8787', roomCode: 'ROOM42', playerId: 'host', seatToken: 'host-token', name: 'Host' });
+  `);
+  p2Env.run(`
+    saveOnlineSession({ baseUrl: 'http://localhost:8787', roomCode: 'ROOM42', playerId: 'p2', seatToken: 'p2-token', name: 'P2' });
+  `);
+
+  assert("host window reloads host seat", hostEnv.run("loadOnlineSession().playerId"), "host");
+  assert("host window reloads host token", hostEnv.run("loadOnlineSession().seatToken"), "host-token");
+  assert("p2 window reloads p2 seat", p2Env.run("loadOnlineSession().playerId"), "p2");
+  assert("p2 window reloads p2 token", p2Env.run("loadOnlineSession().seatToken"), "p2-token");
+  assert("shared localStorage stores full session including playerId", JSON.parse(sharedLocal.get("eq21_online_session")).playerId, "p2");
+
+  const thirdEnv = createEnv({ localStorage: sharedLocal, sessionStorage: new Map() });
+  const fallback = thirdEnv.run("loadOnlineSession()");
+  assert("new window can still see last room", fallback.roomCode, "ROOM42");
+  assert("new window fallback inherits last saved seat token", fallback.seatToken, "p2-token");
 }
 
 section("mobile log defaults collapsed");

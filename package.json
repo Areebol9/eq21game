@@ -1,0 +1,17 @@
+{
+  "name": "equation-21-simple",
+  "version": "3.5.0-online-mvp",
+  "private": true,
+  "scripts": {
+    "test": "node tests/test-expression.js && node tests/test-fuzz.js && node tests/test-static.js && node tests/test-pages-build.js && node tests/test-dom-flow.js && node tests/test-worker-flow.js && node tests/test-online-room-core.js && node tests/test-online-protocol.js && node tests/test-online-load.js",
+    "test:full": "npm run test && node tests/test-solver-perf.js",
+    "test:online": "node tests/test-online-room-core.js && node tests/test-online-protocol.js && node tests/test-online-load.js",
+    "build:pages": "node tools/build-pages.cjs",
+    "deploy:pages": "npm run build:pages && wrangler pages deploy dist --project-name equation-21-simple",
+    "dev:worker": "wrangler dev",
+    "deploy:worker": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.14.0"
+  }
+}

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Cloudflare Wrangler local state/cache
+.wrangler/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime/cache artifacts
+dist/
+.cache/
+.tmp/
+tmp/
+temp/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini

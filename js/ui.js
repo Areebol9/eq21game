@@ -82,6 +82,11 @@ function updateFooterBar() {
     }
   } else if (game.mode === 'local') {
     fb.innerHTML = '<span class="icon">♥</span> 围桌中 · ' + game.players.filter(p => !p.conceded).length + '人对弈 · 牌库' + game.deck.length + ' · 🎯' + game.target;
+  } else if (game.mode === 'online') {
+    const state = game.online.connected ? '已连接' : (game.online.connecting ? '连接中' : '离线');
+    const room = game.online.roomCode ? '房间 ' + game.online.roomCode + ' · ' : '';
+    if (game.phase === 'lobby') fb.innerHTML = '<span class="icon">♣</span> ' + room + state + ' · 等待房主开局';
+    else fb.innerHTML = '<span class="icon">♣</span> ' + room + state + ' · ' + game.players.filter(p => !p.conceded).length + '人在线对弈 · 牌库' + game.deck.length;
   }
 }
 
@@ -171,6 +176,12 @@ function renderCardHTML(value, extraClass) {
 }
 
 function renderAll() {
+  if (game.mode === 'online') {
+    if (game.phase === 'lobby') renderOnlineLobby();
+    else if (game.players.length >= 2) renderTabletop();
+    else renderOnlineLobby();
+    return;
+  }
   if (game.mode === 'local' && game.players.length >= 2) {
     renderTabletop();
     return;
@@ -360,13 +371,25 @@ function renderAll() {
 }
 
 // ==================== 围桌模式渲染 ====================
+function getTabletopRenderEntries() {
+  const entries = game.players.map((player, index) => ({ player, index }));
+  if (game.mode !== 'online') return entries;
+  const mine = entries.findIndex(entry => entry.player && entry.player.id === game.online.playerId);
+  if (mine <= 0) return entries;
+  return entries.slice(mine).concat(entries.slice(0, mine));
+}
+
 function renderTabletop() {
-  const count = game.players.length;
+  const entries = getTabletopRenderEntries();
+  const count = entries.length;
   const area = document.getElementById('players-area');
   const center = document.getElementById('tabletop-center');
+  const isOnline = game.mode === 'online';
 
   area.innerHTML = '';
+  area.classList.remove('online-lobby', 'tabletop-2p', 'tabletop-3p', 'tabletop-4p');
   area.classList.add('tabletop-' + count + 'p');
+  if (isOnline) area.classList.add('online-tabletop');
 
   if (center) {
     area.appendChild(center);
@@ -385,8 +408,10 @@ function renderTabletop() {
   };
   const positions = posConfigs[count] || posConfigs[2];
 
-  game.players.forEach((p, i) => {
-    const pos = positions[i];
+  entries.forEach((entry, visualIndex) => {
+    const p = entry.player;
+    const i = entry.index;
+    const pos = positions[visualIndex];
     const card = document.createElement('div');
     card.className = 'player-card';
     if (p.conceded) card.classList.add('conceded');
@@ -422,9 +447,16 @@ function renderTabletop() {
       const d = document.createElement('div');
       d.innerHTML = renderCardHTML(v, cls);
       const el = d.firstElementChild;
-      el.style.cursor = 'pointer';
-      el.title = '点击插入 ' + cardFace(v);
-      el.onclick = () => { soundPlay('click'); tableAppendExpr(i, cardFace(v)); };
+      el.setAttribute('data-card-index', vi);
+      const canControl = !isOnline || p.id === game.online.playerId;
+      if (canControl) {
+        el.style.cursor = 'pointer';
+        el.title = '点击插入 ' + cardFace(v);
+        el.onclick = () => { soundPlay('click'); tableAppendExpr(i, cardFace(v), { action: 'card', cardIndex: vi }); };
+      } else {
+        el.style.cursor = 'default';
+        el.title = p.name + ' 的公开手牌';
+      }
       cr.appendChild(el);
 
       if (isFirst) {
@@ -443,31 +475,37 @@ function renderTabletop() {
 
     const display = document.createElement('div');
     display.className = 'expr-display';
+    if (p._remoteExprPulse) display.classList.add('remote-expr-action');
     display.textContent = p.inputDraft || '';
     card.appendChild(display);
 
     const act = document.createElement('div'); act.className = 'player-actions';
     const btnSub = document.createElement('button');
     btnSub.className = 'btn-submit'; btnSub.textContent = '提交';
-    btnSub.disabled = (game.phase !== 'playing' || p.conceded);
-    btnSub.onclick = () => submitFormula(i);
+    btnSub.disabled = (game.phase !== 'playing' || p.conceded || (isOnline && p.id !== game.online.playerId));
+    btnSub.onclick = () => isOnline ? onlineSubmitFormula(i) : submitFormula(i);
     act.appendChild(btnSub);
 
     const btnDraw = document.createElement('button');
     btnDraw.className = 'btn-draw'; btnDraw.textContent = '+牌';
-    btnDraw.disabled = (game.phase !== 'playing' || p.conceded || p.hand.length >= game.maxCards);
-    btnDraw.onclick = () => drawForPlayer(i);
+    btnDraw.disabled = (game.phase !== 'playing' || p.conceded || p.hand.length >= game.maxCards || (isOnline && p.id !== game.online.playerId));
+    btnDraw.onclick = () => isOnline ? onlineDrawCard(i) : drawForPlayer(i);
     act.appendChild(btnDraw);
 
     const btnConc = document.createElement('button');
     btnConc.className = 'btn-concede'; btnConc.textContent = '认输';
-    btnConc.disabled = (game.phase !== 'playing' || p.conceded);
-    btnConc.onclick = () => concedePlayer(i);
+    btnConc.disabled = (game.phase !== 'playing' || p.conceded || (isOnline && p.id !== game.online.playerId));
+    btnConc.onclick = function() {
+      if (!confirm('确定要认输吗？')) return;
+      if (isOnline) onlineConcede(i);
+      else concedePlayer(i);
+    };
     act.appendChild(btnConc);
+
     card.appendChild(act);
 
     const symBar = document.createElement('div'); symBar.className = 'symbol-bar';
-    if (game.phase === 'playing' && !p.conceded) {
+    if (game.phase === 'playing' && !p.conceded && (!isOnline || p.id === game.online.playerId)) {
       const syms = ['(', ')', '+', '-', '*', '/'];
       if (game.difficulty !== 'easy') syms.push('^', '√');
       if (game.difficulty === 'hard') syms.push('!');
@@ -479,7 +517,10 @@ function renderTabletop() {
         if (s === '⌫') { btn.classList.add('backspace'); btn.textContent = '⌫'; }
         else { btn.textContent = s; }
         if (s === '√') btn.textContent = '√';
-        btn.onclick = (e) => { e.preventDefault(); tableAppendExpr(i, s); };
+        btn.onclick = (e) => {
+          e.preventDefault();
+          tableAppendExpr(i, s, { action: s === '鈱?' ? 'backspace' : 'symbol', symbol: s });
+        };
         symBar.appendChild(btn);
       });
     } else { symBar.classList.add('placeholder'); }
@@ -496,18 +537,150 @@ function renderTabletop() {
 
   updateTabletopCenter();
   updateDeckCount();
+  renderOnlineChatBar();
   if (game._firstRender) State.set('_firstRender', false);
 }
 
-function tableAppendExpr(idx, symbol) {
+function tableAppendExpr(idx, symbol, meta) {
   const p = game.players[idx];
   if (!p || p.conceded || game.phase !== 'playing') return;
+  if (game.mode === 'online' && p.id !== game.online.playerId) return;
   if (symbol === '⌫') {
     p.inputDraft = p.inputDraft.slice(0, -1);
   } else {
     p.inputDraft += symbol;
   }
   updateExprDisplay(idx);
+  if (game.mode === 'online') {
+    sendOnlineDraftUpdate(idx, meta || { action: 'typing', symbol: symbol });
+  }
+}
+
+function renderOnlineChatBar() {
+  const bar = document.getElementById("online-chat-bar");
+  if (!bar) return;
+  if (game.mode !== "online" || (game.phase !== "lobby" && game.phase !== "playing")) {
+    bar.classList.add("hidden");
+    return;
+  }
+  bar.innerHTML = "";
+  bar.classList.remove("hidden");
+
+  const isPlaying = game.phase === "playing";
+  const items = isPlaying
+    ? [["solved", "算出来了"], ["close", "就差一点"], ["luck", "加油"], ["nice", "漂亮"], ["gg", "GG"]]
+    : [["ready", "准备好了"], ["hello", "大家好"], ["wait", "再等等"], ["hurry", "快开始"], ["again", "再来"]];
+
+  items.forEach(function(item) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = item[1];
+    btn.disabled = !game.online.connected;
+    btn.onclick = function() { onlineQuickChat(item[0]); };
+    bar.appendChild(btn);
+  });
+}
+
+function renderOnlineLobby() {
+  const area = document.getElementById('players-area');
+  const center = document.getElementById('tabletop-center');
+  if (center) {
+    document.getElementById('main-container').appendChild(center);
+    center.classList.add('hidden');
+  }
+  area.innerHTML = '';
+  area.className = 'online-lobby';
+  document.getElementById('stats-panel').classList.add('hidden');
+  document.getElementById('hint-area').classList.add('hidden');
+
+  const panel = document.createElement('section');
+  panel.className = 'online-lobby-panel';
+
+  const title = document.createElement('div');
+  title.className = 'online-room-title';
+  title.innerHTML = '<span>联网房间</span><strong>' + (game.online.roomCode || '------') + '</strong>';
+  panel.appendChild(title);
+
+  const meta = document.createElement('div');
+  meta.className = 'online-room-meta';
+  meta.textContent = (game.online.connected ? '已连接' : '离线') + ' · ' + ({ easy: '简单', normal: '普通', hard: '困难' }[game.difficulty] || '简单') + ' · 目标 ' + game.target;
+  panel.appendChild(meta);
+
+  const list = document.createElement('div');
+  list.className = 'online-seat-list';
+  var seatHeader = document.createElement('div');
+  seatHeader.className = 'online-seat-header';
+  seatHeader.textContent = '玩家列表（' + game.players.length + '/' + (game.online.maxPlayers || 4) + '）';
+  list.appendChild(seatHeader);
+  game.players.forEach((player, idx) => {
+    const row = document.createElement('div');
+    row.className = 'online-seat-row';
+    if (player.id === game.online.playerId) row.classList.add('mine');
+    const left = document.createElement('span');
+    left.textContent = 'P' + (idx + 1) + ' · ' + (player.host ? '👑 房主 · ' : '') + player.name;
+    const right = document.createElement('span');
+    right.className = player.connected ? 'online-ready' : 'online-offline';
+    right.textContent = player.connected ? (player.ready ? '已准备' : '未准备') : '短线离席';
+    row.appendChild(left);
+    row.appendChild(right);
+    list.appendChild(row);
+  });
+  // 空位占位
+  const maxP = game.online.maxPlayers || 4;
+  for (var ei = game.players.length; ei < maxP; ei++) {
+    const empty = document.createElement('div');
+    empty.className = 'online-seat-row empty-seat';
+    empty.innerHTML = '<span>P' + (ei + 1) + ' · -------</span><span class="online-empty">等待加入</span>';
+    list.appendChild(empty);
+  }
+  panel.appendChild(list);
+
+  const myPlayer = game.players.find(function(p) { return p.id === game.online.playerId; });
+  const isReady = myPlayer && myPlayer.ready;
+
+  const actions = document.createElement('div');
+  actions.className = 'online-lobby-actions';
+  const ready = document.createElement('button');
+  ready.className = 'btn-lobby-primary' + (isReady ? ' btn-ready-active' : '');
+  ready.textContent = isReady ? '✓ 已准备' : '准备';
+  ready.disabled = !game.online.connected;
+  ready.onclick = function() {
+    var newReady = !(myPlayer && myPlayer.ready);
+    sendOnlineAction("ready", { ready: newReady });
+    ready.textContent = newReady ? '✓ 已准备' : '准备';
+    if (newReady) { ready.classList.add('btn-ready-active'); }
+    else { ready.classList.remove('btn-ready-active'); }
+    if (myPlayer) myPlayer.ready = newReady;
+    var rightEls = document.querySelectorAll('.online-seat-row.mine .online-ready');
+    if (rightEls.length) rightEls[0].textContent = newReady ? '已准备' : '未准备';
+  };
+  actions.appendChild(ready);
+  const start = document.createElement('button');
+  start.className = 'btn-lobby-primary';
+  start.textContent = '开始对局';
+  start.disabled = !game.online.connected || !game.online.isHost || game.players.length < 2;
+  start.onclick = onlineStartGame;
+  actions.appendChild(start);
+  const share = document.createElement('button');
+  share.className = 'secondary';
+  share.textContent = '复制房间码';
+  share.onclick = () => {
+    if (navigator.clipboard && game.online.roomCode) navigator.clipboard.writeText(game.online.roomCode);
+    showToast('房间码：' + game.online.roomCode, 'submit');
+  };
+  actions.appendChild(share);
+  const leave = document.createElement('button');
+  leave.className = 'secondary';
+  leave.textContent = '离开房间';
+  leave.onclick = function() {
+    if (confirm('确定要离开房间吗？')) onlineLeaveRoom();
+  };
+  actions.appendChild(leave);
+  panel.appendChild(actions);
+
+  area.appendChild(panel);
+  updateFooterBar();
+  renderOnlineChatBar();
 }
 
 function updateExprDisplay(idx) {
@@ -518,6 +691,30 @@ function updateExprDisplay(idx) {
   }
 }
 
+function restartCssAnimation(el, cls) {
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+function flashRemoteCardAction(idx, cardIndex) {
+  const card = document.querySelector('.player-card[data-index="' + idx + '"]');
+  if (!card) return;
+  const shells = card.querySelectorAll('.card-shell');
+  const shell = shells[cardIndex];
+  restartCssAnimation(shell, 'remote-card-action');
+  setTimeout(() => { if (shell) shell.classList.remove('remote-card-action'); }, 520);
+}
+
+function flashRemoteExprAction(idx) {
+  const player = game.players[idx];
+  if (player) player._remoteExprPulse = true;
+  const card = document.querySelector('.player-card[data-index="' + idx + '"]');
+  if (!card) return;
+  restartCssAnimation(card.querySelector('.expr-display'), 'remote-expr-action');
+}
+
 function updateTabletopCenter() {
   const timer = document.getElementById('tc-timer');
   const deck = document.getElementById('tc-deck');
@@ -526,6 +723,11 @@ function updateTabletopCenter() {
     timer.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
   }
   if (deck) deck.textContent = game.deck.length;
+}
+
+function updateTcEvent(text) {
+  const el = document.getElementById('tc-event');
+  if (el) el.textContent = text || '';
 }
 
 // ==================== 输入辅助 ====================
