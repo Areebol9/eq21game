@@ -737,6 +737,21 @@ body{
   display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:6px 0 10px;
 }
 
+/* 妙解评级条 */
+#result-rating{
+  text-align:center;margin:10px 0 6px;
+  padding:6px 0;
+  border-top:1px dashed rgba(212,175,55,0.22);
+  border-bottom:1px dashed rgba(212,175,55,0.22);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+#result-rating .rating-badge{font-size:1.6em;line-height:1;}
+#result-rating .rating-score{font-size:.9em;color:var(--gold);font-weight:700;}
+
+/* 历史面板 - 妙解评级增强 */
+.history-record .rec-rating{color:var(--gold);font-weight:700;font-size:.8em;margin:2px 0;}
+.best-rating{color:var(--gold);font-weight:700;font-size:.82em;margin:2px 0;}
+
 /* 训练记录提示 */
 .history-solo-note{
   text-align:center;color:var(--text-dim);font-size:.78em;

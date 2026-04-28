@@ -71,6 +71,7 @@ function detectOps(formula) {
 function calculateScore(p, expr, handLength, submits, timeSec) {
   const breakdown = [];
   let total = 0;
+  let solutionRating = null;
 
   // 底分
   total += 500;
@@ -97,6 +98,12 @@ function calculateScore(p, expr, handLength, submits, timeSec) {
 
   if (typeof rateSolution === 'function') {
     const rating = rateSolution(expr, game.difficulty, handLength);
+    solutionRating = {
+      score: rating.score,
+      tags: (rating.tags || []).slice(),
+      complexity: rating.complexity,
+      ops: Object.assign({}, rating.ops || {})
+    };
     if (rating.score >= 160) {
       const coolBonus = Math.min(500, Math.round(rating.score / 2));
       total += coolBonus;
@@ -132,7 +139,7 @@ function calculateScore(p, expr, handLength, submits, timeSec) {
     breakdown.push({ label: streak + '连胜', score: streakBonus });
   }
 
-  return { total, breakdown };
+  return { total, breakdown, solutionRating };
 }
 
 // ==================== 标签生成 ====================
@@ -273,6 +280,17 @@ function renderHistoryPanel() {
     bestHtml += '<div class="best-time">' + formatHistoryTime(best.timeSec) + '</div>';
     bestHtml += '<div class="best-hand">' + (best.hand || []).map(function(v) { return cardFace(v); }).join(' ') + '</div>';
     bestHtml += '<div class="best-formula">' + hEscape(best.formula || '') + '</div>';
+    if (best.solutionRating && best.solutionRating.score >= 160) {
+      var sr = best.solutionRating;
+      var srTags = sr.tags || [];
+      var levelTag = '';
+      for (var t = 0; t < srTags.length; t++) {
+        if (srTags[t].indexOf('妙手天成') >= 0) levelTag = srTags[t];
+        else if (!levelTag && srTags[t].indexOf('炫技解法') >= 0) levelTag = srTags[t];
+        else if (!levelTag && srTags[t].indexOf('奇思妙算') >= 0) levelTag = srTags[t];
+      }
+      if (levelTag) bestHtml += '<div class="best-rating">' + levelTag + ' · ' + sr.score + '</div>';
+    }
     if (bestTags.length > 0) {
       bestHtml += '<div class="best-tags">';
       for (var ti = 0; ti < bestTags.length; ti++) {
@@ -306,6 +324,17 @@ function renderHistoryPanel() {
         recHtml += '</div>';
         recHtml += '<div class="rec-hand">' + (r.hand || []).map(function(v) { return cardFace(v); }).join(' ') + '</div>';
         if (r.formula) recHtml += '<div class="rec-formula">' + hEscape(r.formula) + '</div>';
+        if (r.solutionRating && r.solutionRating.score >= 160) {
+          var sr = r.solutionRating;
+          var srTags = sr.tags || [];
+          var levelTag = '';
+          for (var tl = 0; tl < srTags.length; tl++) {
+            if (srTags[tl].indexOf('妙手天成') >= 0) levelTag = srTags[tl];
+            else if (!levelTag && srTags[tl].indexOf('炫技解法') >= 0) levelTag = srTags[tl];
+            else if (!levelTag && srTags[tl].indexOf('奇思妙算') >= 0) levelTag = srTags[tl];
+          }
+          recHtml += '<div class="rec-rating">' + hEscape(levelTag) + ' · 评分 ' + sr.score + '</div>';
+        }
         if (rTags.length > 0) {
           recHtml += '<div class="rec-tags">';
           for (var tj = 0; tj < rTags.length; tj++) {

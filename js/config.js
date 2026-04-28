@@ -16,6 +16,7 @@ const game = {
   _maxHintShown: false, _firstRender: false,
   currentScore: 0,
   scoreBreakdown: [],
+  solutionRating: null,
   gameTags: [],
   solutionCache: { handKey: '', simple: [], cool: [], pending: false, timedOut: false },
   solutionWorker: null,
@@ -123,31 +124,65 @@ async function soundPlay(type) {
   if (!game.soundEnabled) return;
   try {
     if (_audioCtxPromise) { try { await _audioCtxPromise; } catch (e) { _audioCtxPromise = null; return; } _audioCtxPromise = null; }
-    const ctx = _getAudioCtx(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination);
+    const ctx = _getAudioCtx();
     const now = ctx.currentTime;
-    if (type === 'draw') {
-      osc.type = 'sine'; osc.frequency.setValueAtTime(520, now); osc.frequency.linearRampToValueAtTime(780, now + 0.12);
-      gain.gain.setValueAtTime(.15, now); gain.gain.exponentialRampToValueAtTime(.001, now + 0.25);
-      osc.start(now); osc.stop(now + 0.25);
+
+    if (type === 'click') {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = 330;
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.04);
+    } else if (type === 'draw') {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = 440;
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.05, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.12);
     } else if (type === 'submit') {
-      osc.type = 'triangle'; osc.frequency.setValueAtTime(600, now); osc.frequency.linearRampToValueAtTime(900, now + 0.08);
-      gain.gain.setValueAtTime(.12, now); gain.gain.exponentialRampToValueAtTime(.001, now + 0.18);
-      osc.start(now); osc.stop(now + 0.18);
-    } else if (type === 'error') {
-      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.linearRampToValueAtTime(120, now + 0.2);
-      gain.gain.setValueAtTime(.08, now); gain.gain.exponentialRampToValueAtTime(.001, now + 0.3);
-      osc.start(now); osc.stop(now + 0.3);
-    } else if (type === 'flip') {
-      osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.linearRampToValueAtTime(1200, now + 0.06);
-      gain.gain.setValueAtTime(.10, now); gain.gain.exponentialRampToValueAtTime(.001, now + 0.15);
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(392, now);
+      osc.frequency.linearRampToValueAtTime(330, now + 0.12);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.06, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain); gain.connect(ctx.destination);
       osc.start(now); osc.stop(now + 0.15);
+    } else if (type === 'error') {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.linearRampToValueAtTime(175, now + 0.15);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.05, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now); osc.stop(now + 0.18);
     } else if (type === 'win') {
-      const osc2 = ctx.createOscillator(); const gain2 = ctx.createGain(); osc2.connect(gain2); gain2.connect(ctx.destination);
-      osc.type = 'triangle'; osc.frequency.setValueAtTime(523, now); osc.frequency.setValueAtTime(659, now + 0.1); osc.frequency.setValueAtTime(784, now + 0.2); osc.frequency.setValueAtTime(1047, now + 0.3);
-      gain.gain.setValueAtTime(.18, now); gain.gain.exponentialRampToValueAtTime(.001, now + 0.5);
-      osc2.type = 'triangle'; osc2.frequency.setValueAtTime(1047, now + 0.2); osc2.frequency.setValueAtTime(784, now + 0.35);
-      gain2.gain.setValueAtTime(.10, now + 0.2); gain2.gain.exponentialRampToValueAtTime(.001, now + 0.5);
-      osc.start(now); osc.stop(now + 0.5); osc2.start(now + 0.2); osc2.stop(now + 0.5);
+      const osc1 = ctx.createOscillator(); const gain1 = ctx.createGain();
+      const osc2 = ctx.createOscillator(); const gain2 = ctx.createGain();
+      osc1.type = 'sine'; osc2.type = 'sine';
+      osc1.frequency.setValueAtTime(523, now);
+      osc1.frequency.setValueAtTime(659, now + 0.12);
+      osc1.frequency.setValueAtTime(784, now + 0.24);
+      osc1.frequency.setValueAtTime(1047, now + 0.36);
+      gain1.gain.setValueAtTime(0.001, now);
+      gain1.gain.linearRampToValueAtTime(0.10, now + 0.10);
+      gain1.gain.setValueAtTime(0.10, now + 0.35);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+      osc2.frequency.setValueAtTime(1047, now + 0.24);
+      osc2.frequency.setValueAtTime(784, now + 0.40);
+      gain2.gain.setValueAtTime(0.001, now + 0.24);
+      gain2.gain.linearRampToValueAtTime(0.06, now + 0.32);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.60);
+      osc1.connect(gain1); gain1.connect(ctx.destination);
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc1.start(now); osc1.stop(now + 0.65);
+      osc2.start(now + 0.24); osc2.stop(now + 0.60);
     }
   } catch (e) { /* 静默失败 */ }
 }

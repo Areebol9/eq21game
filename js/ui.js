@@ -226,6 +226,7 @@ function renderAll() {
           el.style.cursor = 'pointer';
           el.title = '点击插入 ' + cardFace(v);
           el.onclick = () => {
+            soundPlay('click');
             const inp = card.querySelector('.formula-input');
             if (inp) insertSymbol(inp, cardFace(v));
           };
@@ -423,7 +424,7 @@ function renderTabletop() {
       const el = d.firstElementChild;
       el.style.cursor = 'pointer';
       el.title = '点击插入 ' + cardFace(v);
-      el.onclick = () => tableAppendExpr(i, cardFace(v));
+      el.onclick = () => { soundPlay('click'); tableAppendExpr(i, cardFace(v)); };
       cr.appendChild(el);
 
       if (isFirst) {

@@ -7,6 +7,43 @@
 
 ---
 
+## [v3.4] — 2026-04-28
+
+### 新增
+- 🧠 **Web Worker 求解器**：后台异步求解，不阻塞 UI（`js/solver-worker.js` + `game.js` Worker 管理）
+  - `ensureSolutionWorker()` 惰性创建 Worker，通过 `importScripts` 加载依赖
+  - `requestSolutionAnalysis()` 发送求解请求，`solutionTaskId` + `handKey` 防止 stale response
+  - `__eq21Perf` 性能诊断系统，追踪慢手牌/Worker 超时/降级事件
+- 💎 **妙解评分系统**：`rateSolution()` / `findCoolExpressionsDP()` 智能搜索酷炫解法
+  - 三级标签：🎩妙手天成(≥420) / ✨炫技解法(≥260) / 🧠奇思妙算(≥160)
+  - 6 种算子判定（加减乘除幂开方阶乘）+ 五牌逆转 + 难度模式加分
+- 📊 **双档输出**：`solveHandDetailed()` 统一入口，返回 `simpleSolutions` + `coolSolutions`
+- ⏱ **时间预算控制**：`SOLVE_BUDGETS`（autoHint 80ms / manualHint 300ms / aiThink 500ms）
+- 🔢 **DP 子集枚举搜索**：`findCoolExpressionsDP()` 用 Bitmask DP 找高质量解
+  - `trimMap()` 每子集限 180 候选，`rankExpr()` 按评分+接近度排序
+  - 支持 √ 和 ! 单卡预处理展开
+
+### 优化
+- 求解器缓存：`_aiCache`（aiSolve 结果） + `_detailedSolveCache`（solveHandDetailed 结果）双层隔离
+- 清除提示卡顿：`autoHintMs` 预算内未命中 → 展示已有结果，不影响 UI 响应
+- 解法质量排序：`rateSolution()` 按酷炫度排序，DP 搜索优先返回高质量解
+- `aiSolve()` 支持 `style: 'cool'` 模式：运算符排序优先级反转（`^` > `*` > `/` > `+` > `-`）
+
+### 测试
+- 🧪 新增 4 套自动化测试：
+  - `tests/test-static.js` (48 条) — 静态资源引用、PWA 清单、SW 缓存、JS 语法检查
+  - `tests/test-dom-flow.js` (87 条) — 零依赖 fake DOM 流程测试（围桌入口、历史、妙解、Worker stale）
+  - `tests/test-worker-flow.js` (28 条) — Worker 契约测试（妙解返回、超时边界、异常输入）
+  - `tests/test-solver-perf.js` (默认 138 样本) — 性能回归测试，支持 `--stress --seed --hands`
+- 📊 `tests/_bench_6332J.js` — 6332J 手牌微基准测试
+- 📝 原有测试扩展：`test-expression.js` 132→183 条，`test-fuzz.js` 829→803 模板（重组）
+- 📝 `TEST_PLAN.md` 手工回归清单同步更新，引用全部 6 套自动化测试
+
+### 文档
+- 📝 `ARCHITECTURE.md`：AI 求解器章节重写（双层架构 + 妙解 + Worker），P1 标记完成
+
+---
+
 ## [v3.3] — 2026-04-28
 
 ### 新增

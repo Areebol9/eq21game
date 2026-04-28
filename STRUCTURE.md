@@ -14,15 +14,21 @@ equation-21-simple/
 ├── sw.js                   # Service Worker（离线缓存）
 ├── app.js                  # 原始单文件备份（不参与运行，仅供参考）
 ├── tests/
-│   ├── test-expression.js  # 132 条单元测试（表达式求值 + 手牌验证 + AI求解）
+│   ├── test-expression.js  # 183 条单元测试（表达式求值 + 手牌验证 + AI求解 + 妙解评分）
 │   ├── test-fuzz.js        # 2766 条 Fuzz 测试（自动生成式全链路）
+│   ├── test-static.js      # 48 条静态测试（资源引用、PWA、JS 语法）
+│   ├── test-dom-flow.js    # 87 条 fake DOM 流程测试（围桌入口、历史、Worker stale）
+│   ├── test-worker-flow.js # 28 条 Worker 契约测试（妙解返回、超时边界）
+│   ├── test-solver-perf.js # 性能回归测试（默认 138 样本，支持 --stress）
+│   ├── _bench_6332J.js     # 6332J 手牌微基准测试
 │   └── BUG_REPORT.md       # Bug 修复记录
 └── js/
     ├── config.js           # 全局状态 & 运算符注册表 & 音效
-    ├── expression.js       # 表达式求值器 & AI求解器
+    ├── expression.js       # 表达式求值器 & AI求解器 & 妙解评分
+    ├── solver-worker.js    # Web Worker 求解器（由 game.js 动态创建，非 <script> 加载）
     ├── history.js          # 历史记录 & 评分系统
     ├── ui.js               # UI渲染函数
-    ├── game.js             # 游戏逻辑引擎
+    ├── game.js             # 游戏逻辑引擎 & Worker 管理
     └── main.js             # 入口初始化 & 事件绑定
 ```
 
@@ -72,7 +78,7 @@ equation-21-simple/
 
 ---
 
-### `js/expression.js` — 表达式引擎 & AI求解器（加载第 2 个）
+### `js/expression.js` — 表达式引擎 & AI求解器 & 妙解评分（加载第 2 个）
 
 | 函数 | 职责 |
 |------|------|
@@ -81,9 +87,13 @@ equation-21-simple/
 | `extractNumbers()` | 从表达式中提取所有使用的数字 |
 | `validateHand()` | 验证是否使用全部手牌、有无额外/复用数字 |
 | `checkFormula()` | 完整校验（求值 + 手牌验证），返回结果/错误 |
-| `aiSolve()` | AI 暴力搜索：全排列手牌 + 枚举运算符组合 |
+| `aiSolve()` | AI 暴力搜索：全排列手牌 + 枚举运算符组合，支持简单/酷炫两种风格 |
+| `findCoolExpressionsDP()` | DP 子集枚举搜索高质量妙解（Bitmask DP + trimMap 剪枝） |
+| `rateSolution()` | 解法评分（算子 + 手牌数 + 难度 + 经典模式，6 种算子加权） |
+| `solveHandDetailed()` | 双档输出统一入口：`simpleSolutions` + `coolSolutions` |
+| `analyzeSolutionOps()` | 解析解法的运算符使用情况 |
 
-> **什么情况改这里**：修改求值逻辑（如新增运算符）、改手牌验证规则、优化 AI 搜索策略。
+> **什么情况改这里**：修改求值逻辑（如新增运算符）、改手牌验证规则、优化搜索策略、调整妙解评分公式。
 
 ---
 
@@ -135,11 +145,24 @@ equation-21-simple/
 | `submitFormula()` | 提交算式 → 求值 → 判定胜负 |
 | `drawCard()` | 玩家追加一张牌 |
 | `giveUp()` | 玩家认输处理 |
-| `useHint()` | 渐进式提示（方向→步骤→答案） |
+| `useHint()` | 渐进式提示（方向→步骤→答案），含 Worker 异步求解 |
 | AI 行为 | AI 思考、答题、加牌决策 |
 | `resetGame()` | 重置回菜单 |
+| `ensureSolutionWorker()` | 惰性创建 Web Worker 求解器 |
+| `requestSolutionAnalysis()` | 发送求解请求到 Worker，防 stale response |
 
 > **什么情况改这里**：改游戏流程、改胜负判定、改 AI 行为策略、改提示系统逻辑。
+
+---
+
+### `js/solver-worker.js` — Web Worker 求解器
+
+| 内容 | 说明 |
+|------|------|
+| `importScripts()` | 加载 `config.js` + `expression.js` 依赖 |
+| `onmessage` | 接收 `{hand, target, maxMs, difficulty}` → 调用 `solveHandDetailed()` → 返回双档结果 |
+
+> **注意**：此文件由 `game.js` 通过 `new Worker('js/solver-worker.js')` 动态创建，不在 `<script>` 标签中加载。**什么情况改这里**：需要调整 Worker 求解行为（如修改超时逻辑、过滤条件）。
 
 ---
 
@@ -169,6 +192,8 @@ equation-21-simple/
 
 每个文件只依赖排在前面的文件，无循环依赖。
 
+> **注意**：`solver-worker.js` 不在 `<script>` 中加载。它由 `game.js` 通过 `new Worker('js/solver-worker.js')` 在运行时动态创建为 Web Worker，Worker 内部通过 `importScripts('config.js', 'expression.js')` 加载依赖。
+
 ---
 
 ## 常见修改速查
@@ -196,5 +221,5 @@ equation-21-simple/
 | 零外部依赖 | 纯 HTML+CSS+JS，不需要 Node.js/npm/打包 |
 | 全局作用域 | 通过 `<script>` 加载顺序共享变量，不使用 ES Module |
 | 浏览器直接打开 | 不依赖本地服务器（file:// 下 SW 不可用，需 http://） |
-| 自动化测试 | `node tests/test-expression.js && node tests/test-fuzz.js` |
+| 自动化测试 | `node tests/test-expression.js && node tests/test-fuzz.js && node tests/test-static.js && node tests/test-dom-flow.js && node tests/test-worker-flow.js && node tests/test-solver-perf.js` |
 | 保留备份 | `app.js` 保留原始单文件代码 |

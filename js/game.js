@@ -8,6 +8,66 @@ function stopTimer() {
   if (game.timerInterval) { clearInterval(game.timerInterval); State.set('timerInterval', null); }
 }
 
+// ==================== Hidden performance diagnostics ====================
+const PERF_WARN_MS = {
+  hint: 50,
+  coolHint: 50,
+  fallback: 100,
+  worker: 1200
+};
+
+function perfNow() {
+  if (typeof performance !== 'undefined' && performance && typeof performance.now === 'function') return performance.now();
+  return Date.now();
+}
+
+function isPerfDebugEnabled() {
+  try {
+    return typeof window !== 'undefined' &&
+      window.location &&
+      typeof window.location.search === 'string' &&
+      window.location.search.indexOf('debug=perf') !== -1;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getPerfDebugStore() {
+  if (!isPerfDebugEnabled() || typeof window === 'undefined') return null;
+  if (!window.__eq21Perf) {
+    window.__eq21Perf = {
+      enabled: true,
+      events: [],
+      slowHands: [],
+      clear: function() {
+        this.events.length = 0;
+        this.slowHands.length = 0;
+      }
+    };
+  }
+  return window.__eq21Perf;
+}
+
+function recordPerfEvent(event) {
+  const store = getPerfDebugStore();
+  if (!store) return;
+  const item = Object.assign({ ts: Date.now() }, event || {});
+  store.events.push(item);
+  if (store.events.length > 80) store.events.shift();
+  if (item.handKey && typeof item.elapsedMs === 'number') {
+    store.slowHands.push(item);
+    store.slowHands.sort((a, b) => (b.elapsedMs || 0) - (a.elapsedMs || 0));
+    if (store.slowHands.length > 20) store.slowHands.length = 20;
+  }
+}
+
+function warnPerfIfSlow(label, elapsedMs, limitMs, detail) {
+  if (!isPerfDebugEnabled() || typeof elapsedMs !== 'number' || elapsedMs <= limitMs) return;
+  if (typeof console !== 'undefined' && console && typeof console.warn === 'function') {
+    console.warn('[eq21 perf] ' + label + ' took ' + Math.round(elapsedMs) + 'ms', detail || {});
+  }
+}
+
 // ==================== Solo solution worker ====================
 function getSolutionHandKey(hand) {
   return [game.difficulty, game.target, hand.slice().sort((a, b) => a - b).join(',')].join('|');
@@ -33,11 +93,37 @@ function ensureSolutionWorker() {
     worker.onmessage = function(e) {
       const data = e.data || {};
       const cache = game.solutionCache;
-      if (!cache || data.id !== game.solutionTaskId || data.handKey !== cache.handKey) return;
+      const elapsedMs = cache && cache.startedAt ? perfNow() - cache.startedAt : null;
+      if (!cache || data.id !== game.solutionTaskId || data.handKey !== cache.handKey) {
+        recordPerfEvent({
+          type: 'worker-stale',
+          source: 'worker',
+          id: data.id,
+          currentId: game.solutionTaskId,
+          handKey: data.handKey,
+          currentHandKey: cache ? cache.handKey : '',
+          stale: true,
+          elapsedMs
+        });
+        return;
+      }
       cache.simple = data.simpleSolutions || [];
       cache.cool = data.coolSolutions || [];
       cache.pending = false;
       cache.timedOut = !!data.timedOut;
+      recordPerfEvent({
+        type: 'solve',
+        source: 'worker',
+        id: data.id,
+        handKey: data.handKey,
+        hand: cache.hand || [],
+        difficulty: game.difficulty,
+        elapsedMs,
+        timedOut: cache.timedOut,
+        simpleCount: cache.simple.length,
+        coolCount: cache.cool.length
+      });
+      warnPerfIfSlow('worker solve', elapsedMs, PERF_WARN_MS.worker, { handKey: data.handKey, timedOut: cache.timedOut });
       _lastCheckedHand = '';
       updateSolutionHint();
       renderAll();
@@ -45,6 +131,15 @@ function ensureSolutionWorker() {
     worker.onerror = function() {
       const cache = game.solutionCache;
       if (cache) { cache.pending = false; cache.timedOut = true; }
+      recordPerfEvent({
+        type: 'worker-error',
+        source: 'worker',
+        handKey: cache ? cache.handKey : '',
+        hand: cache ? cache.hand || [] : [],
+        difficulty: game.difficulty,
+        elapsedMs: cache && cache.startedAt ? perfNow() - cache.startedAt : null,
+        timedOut: true
+      });
     };
     State.set('solutionWorker', worker);
     return worker;
@@ -62,13 +157,15 @@ function requestSolutionAnalysis() {
   if (game.solutionCache && game.solutionCache.handKey === handKey && (game.solutionCache.simple.length || game.solutionCache.cool.length || game.solutionCache.timedOut)) return;
 
   State.set('solutionTaskId', game.solutionTaskId + 1);
-  State.set('solutionCache', { handKey, simple: [], cool: [], pending: true, timedOut: false });
+  const taskStartedAt = perfNow();
+  const taskHand = [...p.hand];
+  State.set('solutionCache', { handKey, simple: [], cool: [], pending: true, timedOut: false, startedAt: taskStartedAt, hand: taskHand });
   const worker = ensureSolutionWorker();
   if (worker) {
     worker.postMessage({
       id: game.solutionTaskId,
       handKey,
-      hand: [...p.hand],
+      hand: taskHand,
       target: game.target,
       difficulty: game.difficulty,
       mode: game.mode,
@@ -77,13 +174,31 @@ function requestSolutionAnalysis() {
     return;
   }
 
-  const detailed = solveHandDetailed([...p.hand], game.target, getBinaryOps(), { maxMs: SOLVE_BUDGETS.manualHintMs });
+  const fallbackStart = perfNow();
+  const detailed = solveHandDetailed(taskHand, game.target, getBinaryOps(), { maxMs: SOLVE_BUDGETS.manualHintMs });
+  const fallbackElapsed = perfNow() - fallbackStart;
+  recordPerfEvent({
+    type: 'solve',
+    source: 'fallback',
+    id: game.solutionTaskId,
+    handKey,
+    hand: taskHand,
+    difficulty: game.difficulty,
+    elapsedMs: fallbackElapsed,
+    timedOut: detailed.timedOut,
+    simpleCount: detailed.simpleSolutions.length,
+    coolCount: detailed.coolSolutions.length,
+    cached: !!detailed.cached
+  });
+  warnPerfIfSlow('fallback solve', fallbackElapsed, PERF_WARN_MS.fallback, { handKey, timedOut: detailed.timedOut });
   State.set('solutionCache', {
     handKey,
     simple: detailed.simpleSolutions,
     cool: detailed.coolSolutions,
     pending: false,
-    timedOut: detailed.timedOut
+    timedOut: detailed.timedOut,
+    startedAt: taskStartedAt,
+    hand: taskHand
   });
 }
 
@@ -97,103 +212,130 @@ function extractFirstStep(solution) {
   return null;
 }
 
+function describeCoolSolution(solution, handLength) {
+  const expr = solution && solution.expr ? solution.expr : String(solution || '');
+  const parts = [];
+  if (expr.indexOf('^') !== -1) parts.push('用了幂运算做跳板');
+  if (expr.indexOf('\u221A') !== -1 || expr.toLowerCase().indexOf('sqrt') !== -1) parts.push('先开方拆出好用的数');
+  if (expr.indexOf('!') !== -1) parts.push('用阶乘把小牌放大');
+  if (handLength >= 5) parts.push('五张牌都串进去了');
+  if (/7\s*\*\s*3|3\s*\*\s*7/.test(expr)) parts.push('最后收成 7×3');
+  return parts.length ? parts.join('，') : '结构很干净';
+}
+
 function showHint() {
+  const perfStart = perfNow();
   if (game.mode !== 'solo' || game.phase !== 'playing') return;
   if (game.stats.hintsUsed >= game.stats.maxHints) return;
   const p = game.players[0];
-  requestSolutionAnalysis();
-  const cache = getCurrentSolutionCache();
-  if (!cache || cache.pending) {
-    clearSolutionHint();
-    showToast('正在观察这手牌，提示次数保留', 'submit');
-    renderAll();
-    return;
-  }
-  const solutionInfos = cache.simple.length ? cache.simple : cache.cool;
-  const solutions = solutionInfos.map(s => s.expr);
-  if (cache.timedOut && solutions.length === 0) {
-    clearSolutionHint();
-    showToast('这手牌还没有稳定提示，提示次数保留', 'submit');
-    addLog('提示：后台求解未完成，未消耗提示次数', 'hint');
-    renderAll();
-    return;
-  }
-  game.stats.hintsUsed++;
-  const level = game.stats.hintsUsed;
+  try {
+    requestSolutionAnalysis();
+    const cache = getCurrentSolutionCache();
+    if (!cache || cache.pending) {
+      clearSolutionHint();
+      showToast('我还在端详这手牌，提示次数先替你留着', 'submit');
+      renderAll();
+      return;
+    }
+    const solutionInfos = cache.simple.length ? cache.simple : cache.cool;
+    const solutions = solutionInfos.map(s => s.expr);
+    if (cache.timedOut && solutions.length === 0) {
+      clearSolutionHint();
+      showToast('这手牌藏得有点深，我先不消耗提示次数', 'submit');
+      addLog('提示：后台还在找更稳的思路，未消耗提示次数', 'hint');
+      renderAll();
+      return;
+    }
+    game.stats.hintsUsed++;
+    const level = game.stats.hintsUsed;
 
-  if (solutions.length === 0) {
-    const msgs = [
-      '🤔 当前手牌无法算出21，建议加牌试试',
-      '🧐 还是无解，再加一张牌也许有转机',
-      '😅 依然无解...试试换一组牌？'
-    ];
-    showToast('💡 提示 #' + level + '：' + msgs[Math.min(level - 1, msgs.length - 1)], 'error');
-    addLog('提示 #' + level + '：当前手牌无解', 'hint');
-  } else if (level === 1) {
-    const sol = solutions[0];
-    const hasMul = sol.includes('*'), hasDiv = sol.includes('/'), hasAdd = sol.includes('+'), hasSub = sol.includes('-');
-    const parts = [];
-    if (hasMul) parts.push('乘法');
-    if (hasDiv) parts.push('除法');
-    if (hasAdd) parts.push('加法');
-    if (hasSub) parts.push('减法');
-    const firstStep = extractFirstStep(sol);
-    let hintMsg = '💡 提示 #1：试试用 ' + parts.join(' 和 ') + ' 组合';
-    if (firstStep) hintMsg += '，比如可以先尝试「' + firstStep + '」';
-    showToast(hintMsg, 'submit');
-    addLog('提示 #1：方向性提示已显示', 'hint');
-  } else if (level === 2) {
-    const sol = solutions[0];
-    const firstStep = extractFirstStep(sol);
-    if (firstStep) {
-      const tokens = tokenize(firstStep);
-      if (tokens.length === 3 && tokens[0].type === TOK_NUM && tokens[1].type === TOK_OP && tokens[2].type === TOK_NUM) {
-        try {
-          const subVal = evaluate(firstStep);
-          showToast('💡 提示 #2：先算出「' + firstStep + ' = ' + formatNum(subVal) + '」，再处理剩余牌', 'submit');
-          addLog('提示 #2：中间值提示  → ' + firstStep + ' = ' + formatNum(subVal), 'hint');
-        } catch (e) {
-          showToast('💡 提示 #2：尝试从「' + firstStep + '」开始~', 'submit');
+    if (solutions.length === 0) {
+      const msgs = [
+        '🤔 这手牌现在还没露出通向21的路，加一张试试',
+        '🧐 还差一点火候，再补一张也许就亮了',
+        '😅 这组牌挺倔，换一组会更轻松'
+      ];
+      showToast('💡 提示 #' + level + '：' + msgs[Math.min(level - 1, msgs.length - 1)], 'error');
+      addLog('提示 #' + level + '：当前手牌暂未找到解', 'hint');
+    } else if (level === 1) {
+      const sol = solutions[0];
+      const hasMul = sol.includes('*'), hasDiv = sol.includes('/'), hasAdd = sol.includes('+'), hasSub = sol.includes('-');
+      const parts = [];
+      if (hasMul) parts.push('乘法');
+      if (hasDiv) parts.push('除法');
+      if (hasAdd) parts.push('加法');
+      if (hasSub) parts.push('减法');
+      if (!parts.length) parts.push('组合');
+      const firstStep = extractFirstStep(sol);
+      let hintMsg = '💡 提示 #1：这手牌可以往 ' + parts.join(' 和 ') + ' 方向试';
+      if (firstStep) hintMsg += '，先盯住「' + firstStep + '」';
+      showToast(hintMsg, 'submit');
+      addLog('提示 #1：方向性提示已显示', 'hint');
+    } else if (level === 2) {
+      const sol = solutions[0];
+      const firstStep = extractFirstStep(sol);
+      if (firstStep) {
+        const tokens = tokenize(firstStep);
+        if (tokens.length === 3 && tokens[0].type === TOK_NUM && tokens[1].type === TOK_OP && tokens[2].type === TOK_NUM) {
+          try {
+            const subVal = evaluate(firstStep);
+            showToast('💡 提示 #2：先算出「' + firstStep + ' = ' + formatNum(subVal) + '」，再处理剩余牌', 'submit');
+            addLog('提示 #2：中间值提示  → ' + firstStep + ' = ' + formatNum(subVal), 'hint');
+          } catch (e) {
+            showToast('💡 提示 #2：尝试从「' + firstStep + '」开始', 'submit');
+            addLog('提示 #2：模糊步骤提示', 'hint');
+          }
+        } else {
+          showToast('💡 提示 #2：试试先把几张牌合成一个关键中间值', 'submit');
           addLog('提示 #2：模糊步骤提示', 'hint');
         }
       } else {
-        showToast('💡 提示 #2：试试先从几个牌组合出关键中间值', 'submit');
+        showToast('💡 提示 #2：试着先合并其中两张牌', 'submit');
         addLog('提示 #2：模糊步骤提示', 'hint');
       }
     } else {
-      showToast('💡 提示 #2：试着先合并其中两张牌', 'submit');
-      addLog('提示 #2：模糊步骤提示', 'hint');
+      showToast('💡 答案：' + solutions[0] + ' = 21', 'win');
+      addLog('提示 #3（答案）：' + solutions[0] + ' = 21', 'hint');
     }
-  } else {
-    showToast('💡 答案：' + solutions[0] + ' = 21', 'win');
-    addLog('提示 #3（答案）：' + solutions[0] + ' = 21', 'hint');
+    renderAll();
+  } finally {
+    const elapsed = perfNow() - perfStart;
+    recordPerfEvent({ type: 'hint-click', source: 'ui', elapsedMs: elapsed, handKey: p ? getSolutionHandKey(p.hand) : '' });
+    warnPerfIfSlow('hint click', elapsed, PERF_WARN_MS.hint);
   }
-  renderAll();
 }
 
 function showCoolHint() {
-  if (game.mode !== 'solo' || game.phase !== 'playing') return;
-  if (game.difficulty === 'easy') return;
-  requestSolutionAnalysis();
-  const cache = getCurrentSolutionCache();
-  if (!cache || cache.pending) {
-    showToast('正在寻找妙解，稍等一拍', 'submit');
-    return;
-  }
-  if (!cache.cool.length) {
-    showToast('这手牌更适合朴素解法', 'submit');
-    return;
-  }
-  const solution = cache.cool[0];
-  State.set('coolHintUsed', true);
-  showToast('🎩 妙解思路：' + solution.expr + ' = 21', 'win');
-  addLog('妙解提示：' + solution.expr + ' = 21', 'hint');
+  const perfStart = perfNow();
   const p = game.players[0];
-  if (p) {
-    p.feedback = '🎩 妙解：' + solution.expr;
-    p.feedbackType = 'info';
+  try {
+    if (game.mode !== 'solo' || game.phase !== 'playing') return;
+    if (game.difficulty === 'easy') return;
+    requestSolutionAnalysis();
+    const cache = getCurrentSolutionCache();
+    if (!cache || cache.pending) {
+      showToast('我在翻找这手牌的妙处，稍等一拍', 'submit');
+      return;
+    }
+    if (!cache.cool.length) {
+      showToast('这手牌更适合朴素解法', 'submit');
+      return;
+    }
+    const solution = cache.cool[0];
+    const why = describeCoolSolution(solution, p ? p.hand.length : 0);
+    State.set('coolHintUsed', true);
+    showToast('🎩 妙解思路：' + why + '。' + solution.expr + ' = 21', 'win');
+    addLog('妙解提示：' + why + ' → ' + solution.expr + ' = 21', 'hint');
+    if (p) {
+      p.feedback = '🎩 妙解：' + why + '｜' + solution.expr;
+      p.feedbackType = 'info';
+    }
+    renderAll();
+  } finally {
+    const elapsed = perfNow() - perfStart;
+    recordPerfEvent({ type: 'cool-hint-click', source: 'ui', elapsedMs: elapsed, handKey: p ? getSolutionHandKey(p.hand) : '' });
+    warnPerfIfSlow('cool hint click', elapsed, PERF_WARN_MS.coolHint);
   }
-  renderAll();
 }
 
 // ==================== 玩家操作 ====================
@@ -235,6 +377,7 @@ function submitFormula(idx) {
     const scoreResult = calculateScore(p, expr, p.hand.length, game.stats.submits, game.timerSec);
     State.set('currentScore', scoreResult.total);
     State.set('scoreBreakdown', scoreResult.breakdown);
+    State.set('solutionRating', scoreResult.solutionRating || null);
     const data = loadHistory();
     const streak = computeStreak(data.records, p.name) + 1;
     State.set('gameTags', getTags(expr, p.hand.length, game.stats.submits, game.timerSec, streak, game.difficulty));
@@ -250,6 +393,8 @@ function submitFormula(idx) {
         timeSec: game.timerSec,
         submits: game.stats.submits,
         hintsUsed: game.stats.hintsUsed || 0,
+        scoreBreakdown: scoreResult.breakdown,
+        solutionRating: scoreResult.solutionRating || null,
         tags: game.gameTags
       });
 
@@ -294,6 +439,16 @@ function submitFormula(idx) {
     var winMsg = '🏆 ' + p.name + ' 提交算式 "' + expr + '" = ' + game.target + ' 获胜！！！+' + game.currentScore + '分';
     addLog(winMsg, 'win');
     var toastWin = '🎉 ' + p.name + ' 获胜！答案 = ' + game.target + ' +' + game.currentScore + '分';
+    if (game.solutionRating && game.solutionRating.score >= 160) {
+      var tags = game.solutionRating.tags || [];
+      var levelTag = '';
+      for (var t = 0; t < tags.length; t++) {
+        if (tags[t].indexOf('妙手天成') >= 0) levelTag = tags[t];
+        else if (!levelTag && tags[t].indexOf('炫技解法') >= 0) levelTag = tags[t];
+        else if (!levelTag && tags[t].indexOf('奇思妙算') >= 0) levelTag = tags[t];
+      }
+      if (levelTag) toastWin = levelTag.substring(0, 2) + ' ' + p.name + ' ' + levelTag + '！+' + game.currentScore + '分';
+    }
     showToast(toastWin, 'win');
     document.getElementById('hint-area').classList.add('hidden');
     soundPlay('win'); triggerVictoryEffect();
@@ -315,7 +470,7 @@ function submitFormula(idx) {
     setFeedback(idx, fbMsg, 'err');
     addLog(p.name + ' 提交算式 "' + expr + '" = ' + formatNum(result) + ' ≠ ' + game.target + ' ❌', 'err');
     showToast(toastMsg, 'error');
-    shakeCard(idx); soundPlay('error');
+    shakeCard(idx); soundPlay('submit');
   }
 }
 
@@ -517,7 +672,7 @@ function goToMenu() {
   State.set('phase', 'menu'); State.set('players', []); State.set('deck', []); State.set('timerSec', 0); State.set('aiSolved', false); State.set('aiSolution', null);
   State.set('_firstRender', false); State.set('_solving', false); _lastCheckedHand = '';
   if (typeof clearSolutionHint === 'function') clearSolutionHint();
-  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
+  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('solutionRating', null); State.set('gameTags', []);
   updateTimerUI(); updateDeckCount();
   const tc = document.getElementById('tabletop-center');
   document.getElementById('players-area').innerHTML = '';
@@ -612,7 +767,7 @@ function startSoloGame() {
   initPlayers(['玩家'], [false]);
   dealCards();
   State.set('phase', 'playing'); State.set('stats', { submits: 0, hintsUsed: 0, maxHints: 3, draws: 0 });
-  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
+  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('solutionRating', null); State.set('gameTags', []);
   updateDeckCount(); startTimer();
   document.getElementById('result-overlay').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
@@ -632,7 +787,7 @@ function startLocalGame() {
   initPlayers(names, Array(count).fill(false));
   dealCards();
   State.set('phase', 'playing'); State.set('stats', { submits: 0, hintsUsed: 0, maxHints: 0, draws: 0 });
-  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
+  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('solutionRating', null); State.set('gameTags', []);
   updateDeckCount(); startTimer();
   document.getElementById('table-setup-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
@@ -650,7 +805,7 @@ function startAiGame() {
   initPlayers([playerName, aiName], [false, true]);
   dealCards();
   State.set('phase', 'playing'); State.set('stats', { submits: 0, hintsUsed: 0, maxHints: 3, draws: 0 });
-  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
+  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('solutionRating', null); State.set('gameTags', []);
   updateDeckCount(); startTimer();
   document.getElementById('ai-setup-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
@@ -667,10 +822,12 @@ function showResult(winnerIdx) {
   const title = document.getElementById('result-title');
   const detail = document.getElementById('result-detail');
   const scoreEl = document.getElementById('result-score');
+  const ratingEl = document.getElementById('result-rating');
   const tagsEl = document.getElementById('result-tags');
   ov.classList.remove('hidden');
 
   if (scoreEl) scoreEl.innerHTML = '';
+  if (ratingEl) ratingEl.classList.add('hidden');
   if (tagsEl) tagsEl.innerHTML = '';
 
   if (winnerIdx >= 0) {
@@ -687,6 +844,20 @@ function showResult(winnerIdx) {
           bdHtml += '<span class="score-item">' + game.scoreBreakdown[bi].label + ' +' + game.scoreBreakdown[bi].score + '</span>';
         }
         scoreEl.innerHTML = bdHtml;
+      }
+      // 妙解评级
+      if (ratingEl && game.solutionRating && game.solutionRating.score >= 160) {
+        const sr = game.solutionRating;
+        const levelTag = (sr.tags || []).find(function(t) {
+          return t.indexOf('妙手天成') >= 0 || t.indexOf('炫技解法') >= 0 || t.indexOf('奇思妙算') >= 0;
+        }) || '';
+        var emoji = '💎';
+        if (levelTag.indexOf('妙手天成') >= 0) emoji = '🎩';
+        else if (levelTag.indexOf('炫技解法') >= 0) emoji = '✨';
+        else if (levelTag.indexOf('奇思妙算') >= 0) emoji = '🧠';
+        ratingEl.innerHTML = '<span class="rating-badge">' + emoji + '</span>' +
+          '<span class="rating-score">' + levelTag + ' · 评分 ' + sr.score + '</span>';
+        ratingEl.classList.remove('hidden');
       }
       // 标签
       if (tagsEl && game.gameTags.length > 0) {
@@ -710,7 +881,7 @@ function resetGame() {
   State.set('phase', 'menu'); State.set('players', []); State.set('deck', []); State.set('timerSec', 0); State.set('_maxHintShown', false);
   State.set('aiSolved', false); State.set('aiSolution', null); State.set('_firstRender', false); State.set('_solving', false); _lastCheckedHand = '';
   if (typeof clearSolutionHint === 'function') clearSolutionHint();
-  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('gameTags', []);
+  State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('solutionRating', null); State.set('gameTags', []);
   updateTimerUI(); updateDeckCount();
   document.getElementById('result-overlay').classList.add('hidden');
   const tc2 = document.getElementById('tabletop-center');

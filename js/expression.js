@@ -179,10 +179,11 @@ function validateHand(expr, hand) {
 
 // ==================== AI 求解器（按难度支持四则/幂/开方/阶乘） ====================
 const MAX_UNARY_DEPTH = 2;
-let _aiCache = new Map(), _lastCheckedHand = '';
+let _aiCache = new Map(), _detailedSolveCache = new Map(), _lastCheckedHand = '';
 
 function clearAiCache() {
   _aiCache.clear();
+  _detailedSolveCache.clear();
   _lastCheckedHand = '';
 }
 
@@ -388,14 +389,16 @@ function findCoolExpressionsDP(hand, target, ops, options) {
   function valueKey(value) {
     return String(Math.round(value * 1e9) / 1e9);
   }
-  function rankExpr(expr) {
+  function rankExpr(expr, value) {
     const rating = rateSolution(expr, game.difficulty, hand.length);
-    return rating.score * 10 - String(expr).length;
+    const distance = Math.abs(value - target);
+    const closeBonus = Math.max(0, 180 - Math.min(180, distance * 12));
+    return rating.score * 10 + closeBonus - String(expr).length * 2;
   }
   function addState(map, value, expr) {
     if (!isFinite(value) || isNaN(value) || Math.abs(value) > 1e10) return;
     const key = valueKey(value);
-    const rank = rankExpr(expr);
+    const rank = rankExpr(expr, value);
     const old = map.get(key);
     if (!old || rank > old.rank) map.set(key, { value, expr, rank });
   }
@@ -462,6 +465,33 @@ function findCoolExpressionsDP(hand, target, ops, options) {
 
 function solveHandDetailed(hand, target, ops, options) {
   options = options || {};
+  const cacheKey = [
+    game.difficulty,
+    hasUnary() ? 'u1' : 'u0',
+    hasFactorial() ? 'f1' : 'f0',
+    target,
+    hand.slice().sort((a, b) => a - b).join(','),
+    ops.join('')
+  ].join('|');
+  function cloneInfo(s) {
+    return Object.assign({}, s, {
+      tags: (s.tags || []).slice(),
+      ops: Object.assign({}, s.ops || {})
+    });
+  }
+  function cloneResult(r) {
+    return {
+      simpleSolutions: (r.simpleSolutions || []).map(cloneInfo),
+      coolSolutions: (r.coolSolutions || []).map(cloneInfo),
+      timedOut: !!r.timedOut,
+      cached: !!r.cached
+    };
+  }
+  if (_detailedSolveCache.has(cacheKey)) {
+    const cached = cloneResult(_detailedSolveCache.get(cacheKey));
+    cached.cached = true;
+    return cached;
+  }
   const maxMs = Number.isFinite(Number(options.maxMs)) ? Number(options.maxMs) : 1200;
   const simpleBudget = Math.max(80, Math.floor(maxMs * 0.35));
   const coolBudget = Math.max(120, maxMs - simpleBudget);
@@ -495,9 +525,12 @@ function solveHandDetailed(hand, target, ops, options) {
     })
     .sort((a, b) => b.score - a.score || a.complexity - b.complexity)
     .slice(0, 5);
-  return {
+  const result = {
     simpleSolutions,
     coolSolutions,
-    timedOut: !!simpleRaw.timedOut || !!coolRaw.timedOut
+    timedOut: !!simpleRaw.timedOut || !!coolRaw.timedOut,
+    cached: false
   };
+  if (!result.timedOut) _detailedSolveCache.set(cacheKey, cloneResult(result));
+  return result;
 }

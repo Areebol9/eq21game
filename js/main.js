@@ -77,6 +77,12 @@ function init() {
   game.soundEnabled = localStorage.getItem('eq21_sound') !== 'off';
   updateSoundButton();
 
+  // 按钮点击音效（委托监听所有 <button>）
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('button');
+    if (btn) soundPlay('click');
+  });
+
   // 轻量键盘可访问性
   enableKeyboardActivation();
 

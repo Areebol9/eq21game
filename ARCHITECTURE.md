@@ -67,7 +67,7 @@ game = {
 | 安全性 | ✅ 自研解析器，不使用 `eval()`，无注入风险 |
 | 可扩展性 | ⚠️ 添加新运算符需修改 tokenize + 调度场 + 求值三处 |
 | 错误处理 | ✅ 覆盖除零、非法字符、括号不匹配、连续运算符等 |
-| 测试覆盖 | ✅ `tests/test-expression.js` (132用例) + `tests/test-fuzz.js` (2766实例) |
+| 测试覆盖 | ✅ `tests/test-expression.js` (183用例) + `tests/test-fuzz.js` (2766实例) |
 
 ### 建议重构
 
@@ -75,29 +75,111 @@ game = {
 - 分离 tokenizer / parser / evaluator 为独立函数体，便于单独测试
 - 引入 AST（抽象语法树）作为中间表示，替代直接后缀求值，便于未来支持更复杂语法
 
-> 测试覆盖: `tests/test-expression.js` (132 手工用例) + `tests/test-fuzz.js` (829 模板 × 3 难度 = 2766 实例)，运行方式: `node tests/test-expression.js` 和 `node tests/test-fuzz.js`。
+> 测试覆盖: `tests/test-expression.js` (183 手工用例) + `tests/test-fuzz.js` (803 模板 × 3 难度 + 模糊测试 ≈ 2766 实例)，运行方式: `node tests/test-expression.js` 和 `node tests/test-fuzz.js`。
 
 ---
 
-## 三、AI 求解器分析
+## 三、AI 求解器分析（v3.4 重写）
 
-### 当前策略
+### 当前策略：双层架构
 
-暴力搜索：全排列手牌 + 枚举运算符组合 + 尝试括号位置。
+求解器现在由两层组成，分别用于不同的求解目标：
+
+| 层级 | 函数 | 策略 | 用途 |
+|------|------|------|------|
+| 第一层 | `aiSolve()` | 全排列 + 枚举运算符 + 括号，暴力搜索 | 快速找解（提示/AI答题） |
+| 第二层 | `findCoolExpressionsDP()` | Bitmask DP 子集枚举 | 找高质量妙解（炫技解法） |
+| 调度 | `solveHandDetailed()` | 组合双档输出（simpleSolutions + coolSolutions） | 游戏内统一调用入口 |
 
 ### 性能评估
 
-| 手牌数 | 组合量级 | 耗时 |
-|--------|----------|------|
-| 3 张 | ~数百 | 瞬时 |
-| 4 张 | ~数千 | <100ms |
-| 5 张 | 组合爆炸 | 可能卡顿，需剪枝 |
+| 手牌数 | 组合量级 | 第一层耗时 | 第二层耗时 |
+|--------|----------|------------|------------|
+| 3 张 | ~数百 | 瞬时 | 瞬时 |
+| 4 张 | ~数千 | <100ms | <200ms |
+| 5 张 | ~数万 | ~300ms（时间预算控制） | ~800ms（DP 剪枝+trimMap 上限 180） |
 
-### 建议方向
+> 5 张牌场景通过 **Web Worker** 将求解移到后台线程，主线程完全不阻塞。时间预算通过 `maxMs` 参数和 `Date.now()` 检查实现，超时自动返回已有结果。
 
-- 添加早期剪枝：中间结果超出一定范围（如 >100 或 < -50）时放弃该分支
-- 缓存已计算子表达式，避免重复求值
-- 使用 Web Worker 将 AI 计算移到后台线程，避免阻塞 UI
+### 时间预算
+
+```javascript
+const SOLVE_BUDGETS = {
+  autoHintMs: 80,     // 自动验算预算（游戏开始/加牌后后台验算）
+  manualHintMs: 300,  // 玩家点击提示按钮的预算
+  aiThinkMs: 500      // AI 对手思考预算
+};
+```
+
+预算内未找到解 → 降级到更简单的搜索 → 两次降级仍无解 → 返回空（等同"无解"）。
+
+---
+
+### 三-A、妙解评分系统
+
+#### 评分公式
+
+`rateSolution(expr, difficulty, handLength)` 对各维度评分：
+
+| 维度 | 条件 | 加分 |
+|------|------|------|
+| 乘除运算 | 使用了 `*` 或 `/` | +30 |
+| 幂运算 `^` | 使用了 `^` | +180 |
+| 开方 `√` / `sqrt()` | 使用了开根号 | +200 |
+| 阶乘 `!` | 使用了阶乘 | +300 |
+| 五牌逆转 | 5 张手牌才解出 | +80 |
+| 普通模式加成 | normal 难度用 ^/√ | +80 |
+| 困难模式加成 | hard 难度用 ! | +100 |
+| 精彩除法 | 除以较大的数 | +40 |
+| 巧妙组合 | 含 7×3 / 20 / 24 等经典模式 | +60 |
+
+#### 标签层级
+
+| 标签 | 条件 | 含义 |
+|------|------|------|
+| 💥阶乘狂人 | 用了 `!` | 阶乘专属 |
+| 📐开方妙用 | 用了 `√` / `sqrt()` | 开方专属 |
+| 🔮幂指神算 | 用了 `^` | 幂运算专属 |
+| 🃏五牌逆转 | 5 张牌才解出 | 手牌专属 |
+| 🎩妙手天成 | score ≥ 420 | 顶级炫技解法 |
+| ✨炫技解法 | score ≥ 260 | 高阶炫技解法 |
+| 🧠奇思妙算 | score ≥ 160 | 中级巧妙解法 |
+
+#### DP 搜索实现
+
+`findCoolExpressionsDP(hand, target, ops, options)`:
+- 用 Bitmask 表示子集（`dp[mask] = Map<valueKey, {value, expr, rank}>`）
+- 对每个子集枚举拆分 `(sub, mask ^ sub)`，组合产生新表达式
+- `trimMap()` 限流至每个子集最多 180 个候选
+- `rankExpr()` 按评分排序，最终输出 top-N 妙解
+
+---
+
+### 三-B、Web Worker 架构
+
+```
+主线程 (main/game.js)                  Worker 线程 (solver-worker.js)
+    │                                         │
+    │  postMessage({ hand, target,              │
+    │    maxMs, difficulty })  ──────────►     onmessage → solveHandDetailed()
+    │                                         │
+    │  ◄──────────  postMessage({              │
+    │    simpleSolutions, coolSolutions,         │
+    │    timedOut, handKey })                  │
+    │                                         │
+```
+
+- `game.js` 中 `ensureSolutionWorker()` 惰性创建 Worker（使用 `new Worker('js/solver-worker.js')`）
+- `requestSolutionAnalysis()` 发送求解请求，递增 `solutionTaskId`
+- Worker 返回时校验 `handKey` + `msg.id === game.solutionTaskId`，丢弃 stale 响应
+- `solver-worker.js` 通过 `importScripts('config.js', 'expression.js')` 加载依赖
+
+### 性能诊断
+
+`game.__eq21Perf` 追踪：
+- 慢手牌列表（求解耗时 > 阈值）
+- Worker 超时次数 / 降级事件
+- 控制台 `__eq21Perf.print()` 查看汇总报告
 
 ---
 
@@ -139,7 +221,7 @@ game = {
 | ~~🔴 P0~~ | ~~给表达式求值器写单元测试~~ | ✅ **已完成** — `tests/test-expression.js` + `tests/test-fuzz.js` |
 | ~~🔴 P0~~ | ~~规范化状态管理~~ | ✅ **已完成** — `State.get/set/reset` 入口函数 + 40+ 处替换（`config.js`） |
 | ~~🟡 P1~~ | ~~运算符配置表化~~ | ✅ **已完成** — `OPERATORS` 注册表 7 运算符（`config.js`） |
-| 🟡 P1 | AI 搜索加剪枝 / Web Worker | 避免 5 张牌时 UI 卡顿 |
+| ~~🟡 P1~~ | ~~AI 搜索加剪枝 / Web Worker~~ | ✅ **已完成** — Web Worker + DP搜索 + 时间预算 + 妙解评分（v3.4） |
 | ~~🟢 P2~~ | ~~引入构建工具（Vite）~~ | ~~仅在需要发布生产版本时必要~~ |
 | ~~🟢 P2~~ | ~~引入 TypeScript~~ | ~~类型安全，但增加构建步骤~~ |
 

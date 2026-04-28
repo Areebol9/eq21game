@@ -781,6 +781,25 @@ section("rateSolution: only positive bonus");
   assert("cool solution has reward tags", cool.tags.length > 0, true);
 }
 
+section("solveHandDetailed: complete-result cache");
+
+{
+  const m = loadGameModules("hard");
+  const first = m.solveHandDetailed([7, 9, 1], 21, m.getBinaryOps(), { maxMs: 1000 });
+  assert("first detailed solve is complete", first.timedOut, false);
+  assert("first detailed solve is not marked cached", first.cached, false);
+  const second = m.solveHandDetailed([7, 9, 1], 21, m.getBinaryOps(), { maxMs: 1000 });
+  assert("second detailed solve hits cache", second.cached, true);
+  assert("cached detailed solve preserves cool solution count", second.coolSolutions.length, first.coolSolutions.length);
+}
+
+{
+  const m = loadGameModules("normal");
+  const timedOut = m.solveHandDetailed([13, 13, 13, 13, 13], 21, m.getBinaryOps(), { maxMs: 1 });
+  assert("timed-out detailed solve is marked timedOut", timedOut.timedOut, true);
+  assert("timed-out detailed solve is not marked cached", timedOut.cached, false);
+}
+
 section("aiSolve: fake timeout 不消耗缓存 (证实超时不缓存)");
 
 {

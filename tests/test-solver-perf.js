@@ -132,7 +132,17 @@ function buildCases(opts) {
     { source: "fixed", name: "face-heavy-hard", difficulty: "hard", hand: [11, 12, 13, 1, 6] },
     { source: "fixed", name: "factorial-hard", difficulty: "hard", hand: [4, 3, 1, 1] },
     { source: "fixed", name: "odd-hard", difficulty: "hard", hand: [5, 7, 9, 11, 13] },
-    { source: "fixed", name: "simple-5-normal", difficulty: "normal", hand: [10, 10, 1, 1, 1] }
+    { source: "fixed", name: "simple-5-normal", difficulty: "normal", hand: [10, 10, 1, 1, 1] },
+    { source: "stress-top", name: "stress-hard-12213", difficulty: "hard", hand: [1, 2, 13, 13, 2] },
+    { source: "stress-top", name: "stress-hard-56788", difficulty: "hard", hand: [7, 5, 8, 8, 6] },
+    { source: "stress-top", name: "stress-normal-157KK", difficulty: "normal", hand: [7, 1, 13, 13, 5] },
+    { source: "stress-top", name: "stress-normal-12910K", difficulty: "normal", hand: [10, 9, 1, 2, 13] },
+    { source: "stress-top", name: "stress-normal-358QQ", difficulty: "normal", hand: [8, 3, 12, 5, 12] },
+    { source: "stress-top", name: "stress-hard-AQQQK", difficulty: "hard", hand: [1, 13, 12, 12, 12] },
+    { source: "stress-top", name: "stress-hard-246810", difficulty: "hard", hand: [4, 8, 6, 2, 10] },
+    { source: "stress-top", name: "stress-hard-2910QK", difficulty: "hard", hand: [2, 9, 10, 12, 13] },
+    { source: "stress-top", name: "stress-hard-45JQK", difficulty: "hard", hand: [4, 11, 13, 5, 12] },
+    { source: "stress-top", name: "stress-normal-6677K", difficulty: "normal", hand: [7, 13, 6, 7, 6] }
   ];
 
   const rng = makeRng(opts.seed);
@@ -263,4 +273,3 @@ if (failures.length > 0) {
   }
   process.exit(1);
 }
-

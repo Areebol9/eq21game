@@ -367,6 +367,7 @@ function createEnv(options = {}) {
       webkitAudioContext: null,
       innerWidth: isMobile ? 375 : 1024,
       innerHeight: isMobile ? 667 : 768,
+      location: { search: options.debugPerf ? "?debug=perf" : "" },
       matchMedia(query) {
         return {
           media: query,
@@ -521,6 +522,7 @@ section("AI submitted win records human loss");
     renderAll = function() {};
     showResult = function() {};
     triggerVictoryEffect = function() {};
+    renderAll = function() {};
     addLog = function() {};
     showToast = function() {};
     stopTimer = function() {};
@@ -543,6 +545,40 @@ section("AI submitted win records human loss");
   assert("AI win record belongs to human", history.records[0].player, "Human");
   assert("AI win records human loss", history.records[0].result, "lose");
   assert("AI submitted win ends game", env.run("game.phase"), "ended");
+}
+
+section("cool winning formula records rating and bonus details");
+{
+  const env = createEnv();
+  env.run(`
+    triggerVictoryEffect = function() {};
+    renderAll = function() {};
+    addLog = function() {};
+    showToast = function() {};
+    stopTimer = function() {};
+    stopAiThinking = function() {};
+    game.soundEnabled = false;
+    game.mode = 'solo';
+    game.difficulty = 'hard';
+    game.phase = 'playing';
+    game.timerSec = 18;
+    game.stats = { submits: 0, hintsUsed: 0, maxHints: 3, draws: 0 };
+    game.players = [
+      { name: 'Solo', hand: [7, 9, 1], conceded: false, feedback: '', feedbackType: '', inputDraft: '((7*sqrt(9))^A!)', isAi: false }
+    ];
+    submitFormula(0);
+  `);
+
+  const history = JSON.parse(env.storage.get("eq21_history"));
+  assert("cool win writes one history record", history.records.length, 1);
+  assert("cool win stores score breakdown", Array.isArray(history.records[0].scoreBreakdown), true);
+  assert("cool win stores solution rating", history.records[0].solutionRating.score >= 160, true);
+  assert("cool win stores cool bonus item", history.records[0].scoreBreakdown.some(item => item.label.includes("妙解")), true);
+  assert("cool win result page shows score details", env.document.getElementById("result-score").innerHTML.includes("妙解"), true);
+
+  env.run("renderHistoryPanel();");
+  assert("history panel shows solution rating", env.document.getElementById("history-records").innerHTML.includes("评分"), true);
+  assert("history panel shows rating level tag", env.document.getElementById("history-records").innerHTML.includes("妙手天成"), true);
 }
 
 section("solo no-solution hint clears when hand becomes solvable");
@@ -602,7 +638,8 @@ section("solve timeout does not show stale no-solution hint or consume hints");
 
   assert("timed out manual hint does not consume hint", env.run("game.stats.hintsUsed"), 1);
   assert("timed out manual hint shows one toast", env.run("__toastCount"), 1);
-  assert("timed out manual hint message says not consumed", env.run("__lastToast.includes('提示次数保留')"), true);
+  assert("timed out manual hint message says not consumed", env.run("__lastToast.includes('不消耗提示次数')"), true);
+  assert("timed out manual hint hides technical timeout wording", env.run("!__lastToast.includes('ms') && !__lastToast.includes('超时')"), true);
 }
 
 section("solo hint buttons wait for background solutions");
@@ -625,11 +662,13 @@ section("solo hint buttons wait for background solutions");
   `);
 
   assert("pending simple hint does not consume hint", env.run("game.stats.hintsUsed"), 0);
-  assert("pending simple hint tells player to wait", env.run("__lastToast.includes('正在观察')"), true);
+  assert("pending simple hint tells player to wait", env.run("__lastToast.includes('端详')"), true);
+  assert("pending simple hint hides technical wording", env.run("!__lastToast.includes('ms') && !__lastToast.includes('超时')"), true);
 
   env.run("showCoolHint();");
   assert("pending cool hint still does not consume hint", env.run("game.stats.hintsUsed"), 0);
-  assert("pending cool hint tells player to wait", env.run("__lastToast.includes('妙解')"), true);
+  assert("pending cool hint tells player to wait", env.run("__lastToast.includes('妙处')"), true);
+  assert("pending cool hint hides technical wording", env.run("!__lastToast.includes('ms') && !__lastToast.includes('超时')"), true);
 }
 
 section("solo worker ignores stale responses and keeps hints nonblocking");
@@ -646,7 +685,7 @@ section("solo worker ignores stale responses and keeps hints nonblocking");
     this.messages.push(message);
   };
 
-  const env = createEnv({ Worker: FakeWorker });
+  const env = createEnv({ Worker: FakeWorker, debugPerf: true });
   env.run(`
     game.mode = 'solo';
     game.difficulty = 'hard';
@@ -715,6 +754,44 @@ section("solo worker ignores stale responses and keeps hints nonblocking");
   assert("fresh response fills simple cache", env.run("game.solutionCache.simple.length"), 1);
   assert("fresh response fills cool cache", env.run("game.solutionCache.cool.length"), 1);
   assert("fresh response still avoids sync fallback", env.run("__syncFallbackCalls"), 0);
+  assert("perf debug store is exposed when enabled", env.run("!!window.__eq21Perf"), true);
+  assert("perf debug records stale response", env.run("window.__eq21Perf.events.some(function(e) { return e.type === 'worker-stale'; })"), true);
+  assert("perf debug records worker solve", env.run("window.__eq21Perf.events.some(function(e) { return e.type === 'solve' && e.source === 'worker'; })"), true);
+  assert("perf debug records hint clicks", env.run("window.__eq21Perf.events.some(function(e) { return e.type === 'hint-click'; }) && window.__eq21Perf.events.some(function(e) { return e.type === 'cool-hint-click'; })"), true);
+  assert("perf debug tracks slow-hand candidates", env.run("window.__eq21Perf.slowHands.length > 0"), true);
+}
+
+section("perf debug stays hidden unless query flag is set");
+{
+  const env = createEnv();
+  env.run("recordPerfEvent({ type: 'manual-test', elapsedMs: 999, handKey: 'x' });");
+  assert("perf debug global is absent by default", env.run("typeof window.__eq21Perf"), "undefined");
+}
+
+section("perf debug records fallback solve events");
+{
+  const env = createEnv({ debugPerf: true });
+  env.run(`
+    game.mode = 'solo';
+    game.difficulty = 'hard';
+    game.phase = 'playing';
+    game.target = 21;
+    game.players = [{ name: 'Solo', hand: [7, 9, 1], conceded: false }];
+    renderAll = function() {};
+    updateSolutionHint = function() {};
+    requestSolutionAnalysis();
+  `);
+  assert("fallback solve resolves cache", env.run("game.solutionCache.pending"), false);
+  assert("perf debug records fallback source", env.run("window.__eq21Perf.events.some(function(e) { return e.type === 'solve' && e.source === 'fallback'; })"), true);
+}
+
+section("cool hint explains why the solution is fancy");
+{
+  const env = createEnv();
+  const why = env.run("describeCoolSolution({ expr: '((7*sqrt(9))^A!)' }, 3)");
+  assert("cool hint explanation mentions power", why.includes("幂运算"), true);
+  assert("cool hint explanation mentions sqrt", why.includes("开方"), true);
+  assert("cool hint explanation mentions factorial", why.includes("阶乘"), true);
 }
 
 console.log(`\n${"=".repeat(60)}`);
