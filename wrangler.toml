@@ -1,6 +1,7 @@
 name = "equation-21-online"
 main = "worker/index.js"
 compatibility_date = "2026-04-28"
+workers_dev = true
 
 [[durable_objects.bindings]]
 name = "EQ21_ROOM"
@@ -9,3 +10,7 @@ class_name = "Eq21Room"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Eq21Room"]
+
+[[routes]]
+pattern = "online.eq21game.com"
+custom_domain = true

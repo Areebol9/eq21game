@@ -25,11 +25,46 @@ const ONLINE_MAX_RECONNECT_ATTEMPTS = 10;
 const ONLINE_RECONNECT_BASE_MS = 1500;
 const ONLINE_RECONNECT_MAX_MS = 30000;
 const ONLINE_DRAFT_SEND_MIN_MS = 120;
+const ONLINE_HTTP_TIMEOUT_MS = 10000;
+const ONLINE_CONNECT_TIMEOUT_MS = 12000;
+
+function getConfiguredOnlineBaseUrl() {
+  if (typeof window !== "undefined" && window.EQ21_ONLINE_URL) {
+    return String(window.EQ21_ONLINE_URL || "").trim().replace(/\/+$/, "");
+  }
+  return "";
+}
+
+function getStoredOnlineBaseUrl() {
+  try {
+    return localStorage.getItem(ONLINE_BASE_KEY) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function isLocalOnlineHost(value) {
+  return /(^https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(String(value || ""));
+}
+
+function isLocalPage() {
+  try {
+    return !!(window.location && /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname));
+  } catch (e) {}
+  return false;
+}
 
 function getDefaultOnlineBaseUrl() {
-  const stored = localStorage.getItem(ONLINE_BASE_KEY);
+  const configured = getConfiguredOnlineBaseUrl();
+  const stored = getStoredOnlineBaseUrl();
+  if (configured && !isLocalPage()) {
+    if (stored !== configured && !isLocalOnlineHost(stored)) {
+      try { localStorage.setItem(ONLINE_BASE_KEY, configured); } catch (e) {}
+    }
+    return configured;
+  }
   if (stored) return stored;
-  if (typeof window !== "undefined" && window.EQ21_ONLINE_URL) return window.EQ21_ONLINE_URL;
+  if (configured) return configured;
   try {
     if (window.location && /^https?:$/.test(window.location.protocol)) return window.location.origin;
   } catch (e) {}
@@ -55,13 +90,39 @@ function setOnlineStatus(message, type) {
   }
 }
 
+function showOnlineServiceUrl() {
+  const urlRow = document.querySelector(".online-url-row");
+  if (urlRow) urlRow.style.display = "";
+}
+
+async function fetchOnlineWithTimeout(url, options, timeoutMs) {
+  const Controller = typeof AbortController !== "undefined" ? AbortController : null;
+  const controller = Controller ? new Controller() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs || ONLINE_HTTP_TIMEOUT_MS) : null;
+  try {
+    return await fetch(url, {
+      ...(options || {}),
+      signal: controller ? controller.signal : undefined
+    });
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      const timeoutError = new Error("连接联网服务超时，请检查当前网络是否能访问服务地址");
+      timeoutError.code = "online_http_timeout";
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function openOnlineSetup() {
   document.getElementById("menu-overlay").classList.add("hidden");
   document.getElementById("online-setup-overlay").classList.remove("hidden");
   updateModeBadge("联网对战");
   State.set("mode", "online");
   const base = document.getElementById("online-base-url");
-  if (base && !base.value) base.value = getDefaultOnlineBaseUrl();
+  if (base && (!base.value || (getConfiguredOnlineBaseUrl() && !isLocalPage()))) base.value = getDefaultOnlineBaseUrl();
   const urlRow = document.querySelector(".online-url-row");
   if (urlRow) urlRow.style.display = /localhost|127\.0\.0\.1/i.test(base.value) ? "" : "none";
   const name = document.getElementById("online-player-name");
@@ -95,7 +156,7 @@ async function createOnlineRoom() {
   setOnlineStatus("正在创建房间...", "info");
   try {
     if (typeof fetch !== "function") throw new Error("当前环境不支持 fetch，请使用现代浏览器");
-    const response = await fetch(baseUrl + "/api/rooms", {
+    const response = await fetchOnlineWithTimeout(baseUrl + "/api/rooms", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -104,7 +165,7 @@ async function createOnlineRoom() {
         target: game.target,
         maxPlayers: getSelectedOnlinePlayerCount()
       })
-    });
+    }, ONLINE_HTTP_TIMEOUT_MS);
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || "创建房间失败");
     const session = {
@@ -118,6 +179,7 @@ async function createOnlineRoom() {
     saveOnlineSession(session);
     connectOnlineRoom(session);
   } catch (error) {
+    if (error && error.code === "online_http_timeout") showOnlineServiceUrl();
     setOnlineStatus(error.message || "创建房间失败", "err");
     showToast(error.message || "创建房间失败", "error");
   }
@@ -316,8 +378,19 @@ function connectOnlineRoom(session) {
   }
   const ws = new SocketCtor(buildOnlineWsUrl(session));
   onlineSocket = ws;
+  const connectTimer = setTimeout(() => {
+    if (onlineSocket !== ws || ws.readyState !== 0) return;
+    ws.__eq21TimedOut = true;
+    game.online.connecting = false;
+    setOnlineStatus("连接超时，请检查手机网络或服务地址是否可访问", "err");
+    showToast("连接超时，可能是手机网络无法访问联网服务", "error");
+    showOnlineServiceUrl();
+    try { ws.close(); } catch (e) {}
+    renderAll();
+  }, ONLINE_CONNECT_TIMEOUT_MS);
 
   ws.onopen = function() {
+    clearTimeout(connectTimer);
     game.online.connected = true;
     game.online.connecting = false;
     game.online.status = "已连接";
@@ -340,10 +413,15 @@ function connectOnlineRoom(session) {
   };
 
   ws.onclose = function() {
+    clearTimeout(connectTimer);
     if (onlineSocket === ws) onlineSocket = null;
     game.online.connected = false;
     game.online.connecting = false;
     stopTimer();
+    if (ws.__eq21TimedOut) {
+      renderAll();
+      return;
+    }
     if (!onlineManualClose && game.mode === "online" && game.online.roomCode) {
       setOnlineStatus("连接断开，正在尝试重连...", "err");
       scheduleOnlineReconnect();
