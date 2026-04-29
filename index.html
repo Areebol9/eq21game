@@ -16,24 +16,24 @@
 <!-- 顶部栏 -->
 <div id="header-bar">
   <div class="title" onclick="goToMenu()" title="返回主菜单">
-    <span class="header-suit">♠</span>
+    <span class="header-mark" data-icon="suitSpade"></span>
     <span class="header-cn">算式</span>
     <span class="header-num">21</span>
     <span class="header-cn">点</span>
-    <span class="header-suit">♣</span>
+    <span class="header-mark header-mark-secondary" data-icon="suitClub"></span>
   </div>
   <div class="info">
     <div class="status-chips">
       <span id="diff-badge" class="diff-badge diff-easy">简单</span>
       <span id="mode-badge" class="mode-badge">本地多人</span>
-      <span class="status-chip">牌库:<span id="deck-count">40</span></span>
-      <span class="status-chip">⏱<span id="timer">00:00</span></span>
+      <span class="status-chip"><span class="chip-icon" data-icon="suitSpade"></span>牌库:<span id="deck-count">40</span></span>
+      <span class="status-chip"><span class="chip-icon" data-icon="wait"></span><span id="timer">00:00</span></span>
     </div>
     <div class="header-actions">
-      <button id="btn-rules" class="header-action" onclick="showRules()" title="游戏规则" aria-label="游戏规则"><span class="btn-icon">📖</span><span class="btn-text">规则</span></button>
-      <button id="btn-sound" class="header-action" title="音效开关" aria-label="音效开关"><span class="btn-icon">🔊</span></button>
-      <button id="btn-history" class="header-action" title="对局历史" aria-label="对局历史"><span class="btn-icon">📜</span></button>
-      <button id="btn-back" class="header-action" onclick="goToMenu()" title="返回" aria-label="返回"><span class="btn-icon">⟵</span></button>
+      <button id="btn-rules" class="header-action" onclick="showRules()" title="游戏规则" aria-label="游戏规则"><span class="btn-icon" data-icon="rules"></span><span class="btn-text">规则</span></button>
+      <button id="btn-sound" class="header-action" title="音效开关" aria-label="音效开关"><span class="btn-icon" data-icon="volume"></span></button>
+      <button id="btn-history" class="header-action" title="对局历史" aria-label="对局历史"><span class="btn-icon" data-icon="history"></span></button>
+      <button id="btn-back" class="header-action" onclick="goToMenu()" title="返回" aria-label="返回"><span class="btn-icon" data-icon="arrowLeft"></span><span class="btn-text btn-back-text">返回</span></button>
     </div>
   </div>
 </div>
@@ -64,7 +64,7 @@
 </div>
 
 <!-- 底部信息条 -->
-<div id="footer-bar"><span class="icon">♠</span> 准备开始游戏...</div>
+<div id="footer-bar"><span class="icon" data-icon="card"></span> 准备开始游戏...</div>
 
 <!-- 胜利特效层 -->
 <div id="victory-overlay" class="hidden"></div>
@@ -72,62 +72,95 @@
 <!-- ========== 弹窗层 ========== -->
 
 <!-- 主菜单 -->
-<div id="menu-overlay" class="overlay">
-  <div class="dialog" style="max-width:560px">
-    <div class="logo-section">
-      <div class="logo-main">
-        <span class="title-suit">♠</span>
-        <span class="title-cn">算式</span>
-        <span class="title-num">21</span>
-        <span class="title-cn">点</span>
-        <span class="title-suit">♣</span>
+<div id="menu-overlay" class="home-screen">
+  <div class="home-shell">
+    <section class="home-brand">
+      <div class="logo-section">
+        <div class="logo-main">
+          <span class="title-mark" data-icon="suitSpade"></span>
+          <span class="title-cn">算式</span>
+          <span class="title-num">21</span>
+          <span class="title-cn">点</span>
+          <span class="title-mark title-mark-secondary" data-icon="suitClub"></span>
+        </div>
+        <div class="logo-sub">Equation 21 · The Math Card Game</div>
       </div>
-      <div class="logo-sub">Equation 21 · The Math Card Game</div>
-    </div>
-    <div class="menu-grid">
-      <div class="menu-card" id="btn-solo">        <span class="icon" style="color:var(--blue)">♠</span>
-        <span class="label">单人练习</span>
-        <span class="desc">自由练习·渐进提示</span>
+      <div class="home-table-cues" aria-hidden="true">
+        <span class="cue-card">
+          <i class="cue-corner tl suit-black"><b>A</b><i>♠</i></i>
+          <i class="cue-s suit-black">♠</i>
+          <i class="cue-corner br suit-black"><b>A</b><i>♠</i></i>
+        </span>
+        <span class="cue-card">
+          <i class="cue-corner tl suit-red"><b>4</b><i>♥</i></i>
+          <i class="cue-s suit-red">♥</i>
+          <i class="cue-corner br suit-red"><b>4</b><i>♥</i></i>
+        </span>
+        <span class="cue-card">
+          <i class="cue-corner tl suit-red"><b>9</b><i>♦</i></i>
+          <i class="cue-s suit-red">♦</i>
+          <i class="cue-corner br suit-red"><b>9</b><i>♦</i></i>
+        </span>
       </div>
-      <div class="menu-card" id="btn-local">        <span class="icon" style="color:var(--red)">♥</span>
-        <span class="label">围桌模式</span>
-        <span class="desc">一台设备，多人同桌</span>
+    </section>
+
+    <section class="home-modes" aria-label="选择游戏模式">
+      <div class="menu-grid">
+        <div class="menu-card mode-solo" id="btn-solo">
+          <span class="icon mode-icon" data-icon="single"></span>
+          <span class="label">单人练习</span>
+          <span class="desc">自由练习 · 渐进提示</span>
+        </div>
+        <div class="menu-card mode-local" id="btn-local">
+          <span class="icon mode-icon" data-icon="table"></span>
+          <span class="label">围桌模式</span>
+          <span class="desc">一台设备，多人同桌</span>
+        </div>
+        <div class="menu-card mode-ai" id="btn-ai">
+          <span class="icon mode-icon" data-icon="ai"></span>
+          <span class="label">AI对战</span>
+          <span class="desc">挑战不同级别的 AI</span>
+        </div>
+        <div class="menu-card mode-online" id="btn-online">
+          <span class="icon mode-icon" data-icon="online"></span>
+          <span class="label">联网对战</span>
+          <span class="tag tag-new">MVP</span>
+          <span class="desc">开房邀请，2~4 人在线</span>
+        </div>
       </div>
-      <div class="menu-card" id="btn-ai">        <span class="icon" style="color:var(--gold)">♦</span>
-        <span class="label">AI对战</span>
-        <span class="desc">挑战不同级别的AI</span>
+    </section>
+
+    <section class="home-difficulty" aria-label="选择难度">
+      <p class="section-label">选择难度</p>
+      <div class="choice-grid">
+        <div class="choice-card easy-card selected diff-option" data-diff="easy">
+          <span class="ch-icon diff-icon" data-icon="easy"></span>
+          <span class="ch-title">简单</span>
+          <span class="ch-cards">牌面：A ~ 10</span>
+          <span class="ch-ops">运算：+  -  *  /  ( )</span>
+          <span class="ch-for">适合新手入门</span>
+        </div>
+        <div class="choice-card normal-card diff-option" data-diff="normal">
+          <span class="ch-icon diff-icon" data-icon="normal"></span>
+          <span class="ch-title">普通</span>
+          <span class="ch-cards">牌面：A ~ K</span>
+          <span class="ch-ops">运算：+  -  *  /  ^  √  ( )</span>
+          <span class="ch-for">适合熟练玩家</span>
+        </div>
+        <div class="choice-card hard-card diff-option" data-diff="hard">
+          <span class="ch-icon diff-icon" data-icon="hard"></span>
+          <span class="ch-title">困难</span>
+          <span class="ch-cards">牌面：A ~ K</span>
+          <span class="ch-ops">运算：+  -  *  /  ^  √  !  ( )</span>
+          <span class="ch-for">适合数学高手</span>
+        </div>
       </div>
-      <div class="menu-card" id="btn-online">        <span class="icon" style="color:var(--green)">♣</span>
-        <span class="label">联网对战</span>
-        <span class="tag tag-new">MVP</span>
-        <span class="desc">开房邀请，2~4人在线</span>
-      </div>
-    </div>
-    <p style="color:var(--text);font-weight:600;margin-top:10px">选择难度</p>
-    <div class="choice-grid">
-      <div class="choice-card easy-card selected diff-option" data-diff="easy">        <span class="ch-icon" style="color:var(--green)">♠</span>
-        <span class="ch-title">简单</span>
-        <span class="ch-cards">牌面：A ~ 10</span>
-        <span class="ch-ops">运算：+  -  *  /  ( )</span>
-        <span class="ch-for">适合新手入门</span>
-      </div>
-      <div class="choice-card normal-card diff-option" data-diff="normal">        <span class="ch-icon" style="color:var(--gold)">♥</span>
-        <span class="ch-title">普通</span>
-        <span class="ch-cards">牌面：A ~ K</span>
-        <span class="ch-ops">运算：+  -  *  /  ^  √  ( )</span>
-        <span class="ch-for">适合熟练玩家</span>
-      </div>
-      <div class="choice-card hard-card diff-option" data-diff="hard">        <span class="ch-icon" style="color:var(--red)">♦</span>
-        <span class="ch-title">困难</span>
-        <span class="ch-cards">牌面：A ~ K</span>
-        <span class="ch-ops">运算：+  -  *  /  ^  √  !  ( )</span>
-        <span class="ch-for">适合数学高手</span>
-      </div>
-    </div>
+    </section>
+
     <div class="menu-footer">
-      <button class="btn-menu-secondary" onclick="openHistory()" aria-label="打开对局历史">对局历史</button>
+      <button class="btn-menu-secondary" onclick="openHistory()" aria-label="打开对局历史"><span class="inline-icon" data-icon="history"></span>对局历史</button>
       <span class="menu-footer-divider">|</span>
-      <button class="btn-menu-secondary" onclick="showRules()" aria-label="打开游戏规则">游戏规则</button>
+      <button class="btn-menu-secondary" onclick="showRules()" aria-label="打开游戏规则"><span class="inline-icon" data-icon="rules"></span>游戏规则</button>
     </div>
   </div>
 </div>
@@ -135,26 +168,26 @@
 <!-- 规则说明弹窗 -->
 <div id="rules-overlay" class="overlay hidden">
   <div class="dialog" style="max-width:620px;text-align:left">
-    <h2 style="text-align:center">📖 游戏规则</h2>
+    <h2 class="dialog-title"><span class="inline-icon" data-icon="rules"></span>游戏规则</h2>
 
-    <p style="font-weight:700;color:var(--gold);font-size:1.1em">🎯 目标</p>
+    <p class="rule-section-title"><span class="inline-icon" data-icon="target"></span>目标</p>
     <p>使用手中<strong>所有牌</strong>，通过运算组合使结果<strong>恰好等于 21</strong>！</p>
 
-    <p style="font-weight:700;color:var(--gold);font-size:1.1em;margin-top:12px">🃏 牌面对应数值</p>
+    <p class="rule-section-title"><span class="inline-icon" data-icon="card"></span>牌面对应数值</p>
     <table class="rules-table">
       <tr><th>A</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>J</th><th>Q</th><th>K</th></tr>
       <tr><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td></tr>
     </table>
 
-    <p style="font-weight:700;color:var(--gold);font-size:1.1em;margin-top:12px">🔢 难度与运算符</p>
+    <p class="rule-section-title"><span class="inline-icon" data-icon="normal"></span>难度与运算符</p>
     <table class="rules-table">
       <tr><th>难度</th><th>牌面</th><th>可用运算符</th><th>适合</th></tr>
-      <tr><td>🟢 简单</td><td>A~10</td><td>+  -  *  /  ( )</td><td>新手入门</td></tr>
-      <tr><td>🟡 普通</td><td>A~K</td><td>+  -  *  /  ^  √  ( )</td><td>熟练玩家</td></tr>
-      <tr><td>🔴 困难</td><td>A~K</td><td>+  -  *  /  ^  √  !  ( )</td><td>数学高手</td></tr>
+      <tr><td>简单</td><td>A~10</td><td>+  -  *  /  ( )</td><td>新手入门</td></tr>
+      <tr><td>普通</td><td>A~K</td><td>+  -  *  /  ^  √  ( )</td><td>熟练玩家</td></tr>
+      <tr><td>困难</td><td>A~K</td><td>+  -  *  /  ^  √  !  ( )</td><td>数学高手</td></tr>
     </table>
 
-    <p style="font-weight:700;color:var(--gold);font-size:1.1em;margin-top:12px">✍️ 表达式示例</p>
+    <p class="rule-section-title"><span class="inline-icon" data-icon="rules"></span>表达式示例</p>
     <div class="rules-example">
       <p style="color:var(--text-dim)">手牌：<strong>[2, 4, 5, 1]</strong></p>
       <code class="valid">✓ (5+2)*(4-1) = 7×3 = 21</code>
@@ -163,7 +196,7 @@
       <code class="invalid">✗ 5+4+2 = 11（少用了一张牌！）</code>
     </div>
 
-    <p style="font-weight:700;color:var(--gold);font-size:1.1em;margin-top:12px">⚠️ 重要规则</p>
+    <p class="rule-section-title"><span class="inline-icon" data-icon="hard"></span>重要规则</p>
     <ul style="margin-left:20px;color:var(--text);font-size:.88em;line-height:1.8">
       <li>每张牌<strong>必须且只能</strong>使用一次</li>
       <li>不能拼接数字（1和2不能拼成12）</li>
@@ -182,21 +215,21 @@
 <!-- AI设置弹窗 -->
 <div id="ai-setup-overlay" class="overlay hidden">
   <div class="dialog">
-    <h2>🤖 AI对战设置</h2>
+    <h2 class="dialog-title"><span class="inline-icon" data-icon="ai"></span>AI对战设置</h2>
     <div class="row"><label>你的名字</label><input type="text" id="ai-player-name" value="玩家" maxlength="10"></div>
-    <p style="color:var(--text);font-weight:600;margin-top:10px">选择对手等级</p>
-    <div class="choice-grid" style="margin-bottom:6px">
-      <div class="choice-card easy-card selected ai-level-option" data-level="easy">        <span class="ch-icon">🐣</span>
+    <p class="section-label">选择对手等级</p>
+    <div class="choice-grid dialog-choice-grid">
+      <div class="choice-card easy-card selected ai-level-option" data-level="easy">        <span class="ch-icon" data-icon="aiEasy"></span>
         <span class="ch-title">新手赌徒</span>
         <span class="ch-cards">入门级对手</span>
         <span class="ch-for">"还在学算牌"</span>
       </div>
-      <div class="choice-card normal-card ai-level-option" data-level="medium">        <span class="ch-icon">🦊</span>
+      <div class="choice-card normal-card ai-level-option" data-level="medium">        <span class="ch-icon" data-icon="aiMedium"></span>
         <span class="ch-title">老练玩家</span>
         <span class="ch-cards">进阶级对手</span>
         <span class="ch-for">"数感不错"</span>
       </div>
-      <div class="choice-card hard-card ai-level-option" data-level="hard">        <span class="ch-icon">🧠</span>
+      <div class="choice-card hard-card ai-level-option" data-level="hard">        <span class="ch-icon" data-icon="aiHard"></span>
         <span class="ch-title">数学教授</span>
         <span class="ch-cards">专家级对手</span>
         <span class="ch-for">"几乎不会错过"</span>
@@ -210,21 +243,21 @@
 <!-- 围桌模式设置弹窗 -->
 <div id="table-setup-overlay" class="overlay hidden">
   <div class="dialog">
-    <h2>🃏 围桌模式</h2>
-    <p style="color:var(--text);font-weight:600;margin-top:10px">选择人数布局</p>
+    <h2 class="dialog-title"><span class="inline-icon" data-icon="table"></span>围桌模式</h2>
+    <p class="section-label">选择人数布局</p>
     <div class="choice-grid">
       <div class="choice-card selected table-opt" data-players="2">
-        <span class="ch-icon">⚔️</span>
+        <span class="ch-icon" data-icon="seats2"></span>
         <span class="ch-title">双人对弈</span>
         <span class="ch-cards">面对面决胜</span>
       </div>
       <div class="choice-card table-opt" data-players="3">
-        <span class="ch-icon">▲</span>
+        <span class="ch-icon" data-icon="seats3"></span>
         <span class="ch-title">三足鼎立</span>
         <span class="ch-cards">三角对峙</span>
       </div>
       <div class="choice-card table-opt" data-players="4">
-        <span class="ch-icon">◆</span>
+        <span class="ch-icon" data-icon="seats4"></span>
         <span class="ch-title">四方会战</span>
         <span class="ch-cards">围桌四方</span>
       </div>
@@ -238,14 +271,14 @@
 <!-- 联网模式设置弹窗 -->
 <div id="online-setup-overlay" class="overlay hidden">
   <div class="dialog online-dialog">
-    <h2>♣ 联网对战</h2>
+    <h2 class="dialog-title"><span class="inline-icon" data-icon="online"></span>联网对战</h2>
     <div class="row online-url-row" style="display:none"><label>服务地址</label><input type="text" id="online-base-url" placeholder="http://localhost:8787"></div>
     <div class="row"><label>昵称</label><input type="text" id="online-player-name" value="玩家" maxlength="12"></div>
-    <p style="color:var(--text);font-weight:600;margin-top:10px">房间人数</p>
+    <p class="section-label">房间人数</p>
     <div class="choice-grid online-player-grid">
-      <div class="choice-card online-player-opt" data-players="2"><span class="ch-title">2人</span><span class="ch-cards">双人快局</span></div>
-      <div class="choice-card online-player-opt" data-players="3"><span class="ch-title">3人</span><span class="ch-cards">小桌混战</span></div>
-      <div class="choice-card selected online-player-opt" data-players="4"><span class="ch-title">4人</span><span class="ch-cards">年会小桌</span></div>
+      <div class="choice-card online-player-opt" data-players="2"><span class="ch-icon" data-icon="seats2"></span><span class="ch-title">2人</span><span class="ch-cards">双人切磋</span></div>
+      <div class="choice-card online-player-opt" data-players="3"><span class="ch-icon" data-icon="seats3"></span><span class="ch-title">3人</span><span class="ch-cards">三人成局</span></div>
+      <div class="choice-card selected online-player-opt" data-players="4"><span class="ch-icon" data-icon="seats4"></span><span class="ch-title">4人</span><span class="ch-cards">四方争锋</span></div>
     </div>
     <button id="btn-create-online" aria-label="创建联网房间">创建房间</button>
     <div class="online-join-row">
@@ -261,12 +294,13 @@
 <!-- 结果弹窗 -->
 <div id="result-overlay" class="overlay hidden">
   <div class="dialog">
-    <span class="result-icon" id="result-icon">🏆</span>
+    <span class="result-icon" id="result-icon" data-icon="trophy"></span>
     <h2 id="result-title"></h2>
     <p id="result-detail"></p>
     <div id="result-score"></div>
     <div id="result-rating" class="hidden"></div>
     <div id="result-tags"></div>
+    <div id="result-rematch-status"></div>
     <button id="btn-again" aria-label="再来一局">再来一局</button>
     <button class="secondary" id="btn-menu" aria-label="返回菜单">返回菜单</button>
   </div>
@@ -275,11 +309,11 @@
 <!-- 历史面板（侧边滑出） -->
 <div id="history-panel" class="history-panel hidden">
   <div class="history-header">
-    <span class="history-title">📜 对局历史</span>
+    <span class="history-title"><span class="inline-icon" data-icon="history"></span>对局历史</span>
     <div class="history-header-actions">
-      <button id="btn-history-clear" class="btn-sm" title="清空历史" aria-label="清空历史">🗑 清空</button>
+      <button id="btn-history-clear" class="btn-sm" title="清空历史" aria-label="清空历史"><span class="inline-icon" data-icon="trash"></span>清空</button>
       <span id="history-streak" class="history-streak"></span>
-      <button id="btn-history-close" class="btn-close-panel" aria-label="关闭历史面板">✕ 关闭</button>
+      <button id="btn-history-close" class="btn-close-panel" aria-label="关闭历史面板"><span class="inline-icon" data-icon="close"></span>关闭</button>
     </div>
   </div>
   <div class="history-body">
@@ -300,6 +334,7 @@
 <script src="js/config.js"></script>
 <script src="js/expression.js"></script>
 <script src="js/history.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/deploy-config.js"></script>
 <script src="js/online.js"></script>

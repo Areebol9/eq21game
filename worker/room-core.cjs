@@ -423,11 +423,27 @@ function publicPlayer(player) {
   };
 }
 
+function rematchSnapshot(room) {
+  const votes = room.rematchVotes || {};
+  const players = room.players || [];
+  const needed = players.length;
+  const agreed = players.filter(player => votes[player.id]).length;
+  const canRematch = room.phase === "ended" && room.deck.length >= needed * 3;
+  return {
+    votes,
+    agreed,
+    needed,
+    canRematch
+  };
+}
+
 function publicRoom(room, viewerId) {
+  const rematch = rematchSnapshot(room);
   return {
     schemaVersion: room.schemaVersion,
     roomCode: room.roomCode,
     phase: room.phase,
+    round: room.round || 1,
     difficulty: room.difficulty,
     target: room.target,
     maxPlayers: room.maxPlayers,
@@ -437,6 +453,10 @@ function publicRoom(room, viewerId) {
     startedAt: room.startedAt,
     endedAt: room.endedAt,
     deckCount: room.deck.length,
+    rematchVotes: Object.assign({}, rematch.votes),
+    rematchAgreedCount: rematch.agreed,
+    rematchNeededCount: rematch.needed,
+    canRematch: rematch.canRematch,
     players: room.players.map(publicPlayer),
     events: room.events.slice(-30),
     version: room.version,
@@ -486,6 +506,8 @@ function createRoom(options) {
     hostId,
     players: [host],
     deck: [],
+    round: 1,
+    rematchVotes: {},
     startedAt: null,
     endedAt: null,
     winnerId: null,
@@ -500,7 +522,6 @@ function joinRoom(room, options) {
   const now = Number(options && options.now) || Date.now();
   pruneExpiredSeats(room, now);
   autoForfeitDisconnected(room, now);
-  if (room.phase === "ended") throw makeRoomError("room_ended", "room_ended");
   const name = trimName(options && options.name, "玩家");
   let player = null;
   if (options && options.playerId && options.seatToken) {
@@ -510,12 +531,15 @@ function joinRoom(room, options) {
     player.connected = true;
     player.name = name || player.name;
     player.lastSeenAt = now;
-    player.feedback = "";
-    player.feedbackType = "";
+    if (room.phase !== "ended") {
+      player.feedback = "";
+      player.feedbackType = "";
+    }
     bump(room);
     addEvent(room, "join", player.name + " 回到房间", now, { playerId: player.id });
     return { player, reconnected: true };
   }
+  if (room.phase === "ended") throw makeRoomError("room_ended", "room_ended");
   if (room.phase !== "lobby") throw new Error("对局已经开始，暂不能加入");
   if (room.players.length >= room.maxPlayers) throw new Error("房间已满");
   player = {
@@ -600,6 +624,7 @@ function autoForfeitDisconnected(room, now) {
       room.phase = "ended";
       room.winnerId = active[0] ? active[0].id : null;
       room.endedAt = now;
+      room.rematchVotes = {};
       if (active[0]) {
         active[0].feedback = "对手断线，获胜！";
         active[0].feedbackType = "ok";
@@ -636,6 +661,25 @@ function setReady(room, playerId, ready, now) {
   addEvent(room, "ready", player.name + (player.ready ? " 已准备" : " 取消准备"), now || Date.now(), { playerId });
 }
 
+function dealRoundFromCurrentDeck(room, now, message) {
+  const needed = room.players.length * 3;
+  if (room.deck.length < needed) throw makeRoomError("deck_not_enough", "deck_not_enough");
+  room.players.forEach(player => {
+    player.hand = [];
+    player.conceded = false;
+    player.feedback = "";
+    player.feedbackType = "";
+    for (let i = 0; i < 3; i++) player.hand.push(room.deck.pop());
+  });
+  room.phase = "playing";
+  room.startedAt = now;
+  room.endedAt = null;
+  room.winnerId = null;
+  room.rematchVotes = {};
+  bump(room);
+  addEvent(room, "start", message || ("Round " + (room.round || 1) + " started, target " + room.target), now);
+}
+
 function startGame(room, playerId, options) {
   const now = Number(options && options.now) || Date.now();
   const random = options && options.random;
@@ -645,6 +689,9 @@ function startGame(room, playerId, options) {
   const unready = room.players.filter(p => !p.ready && p.id !== room.hostId);
   if (unready.length) throw new Error("还有玩家未准备");
   room.deck = shuffle(createDeck(room.difficulty), random);
+  room.round = room.round || 1;
+  dealRoundFromCurrentDeck(room, now, "Round " + room.round + " started, target " + room.target);
+  return;
   room.players.forEach(player => {
     player.hand = [];
     player.conceded = false;
@@ -706,6 +753,7 @@ function submitFormula(room, playerId, rawExpr, now) {
     room.phase = "ended";
     room.winnerId = player.id;
     room.endedAt = now;
+    room.rematchVotes = {};
     player.feedback = "获胜！" + expr + " = " + room.target;
     player.feedbackType = "ok";
     bump(room);
@@ -741,6 +789,7 @@ function concedePlayer(room, playerId, now) {
     room.phase = "ended";
     room.winnerId = active[0] ? active[0].id : null;
     room.endedAt = now;
+    room.rematchVotes = {};
     if (active[0]) {
       active[0].feedback = "对手认输，获胜！";
       active[0].feedbackType = "ok";
@@ -760,6 +809,25 @@ function quickChat(room, playerId, chatId, now) {
   player.lastChatAt = now;
   bump(room);
   addEvent(room, "chat", player.name + "：" + QUICK_CHAT_TEXT[chatId], now, { playerId, chatId });
+}
+
+function setRematchVote(room, playerId, agreed, options) {
+  const now = Number(options && options.now) || Date.now();
+  if (room.phase !== "ended") throw new Error("Current round is not finished");
+  const player = requirePlayer(room, playerId);
+  const neededCards = room.players.length * 3;
+  if (room.deck.length < neededCards) throw makeRoomError("deck_not_enough", "deck_not_enough");
+  room.rematchVotes = room.rematchVotes || {};
+  if (agreed === false) delete room.rematchVotes[player.id];
+  else room.rematchVotes[player.id] = true;
+  bump(room);
+  addEvent(room, "rematch", player.name + (room.rematchVotes[player.id] ? " agreed to rematch" : " canceled rematch"), now, { playerId, agreed: !!room.rematchVotes[player.id] });
+
+  const rematch = rematchSnapshot(room);
+  if (rematch.needed > 0 && rematch.agreed >= rematch.needed && rematch.canRematch) {
+    room.round = (room.round || 1) + 1;
+    dealRoundFromCurrentDeck(room, now, "Round " + room.round + " started from the remaining deck");
+  }
 }
 
 function sanitizePresenceAction(value) {
@@ -804,6 +872,7 @@ function applyAction(room, playerId, action, options) {
   else if (type === "submit_formula") submitFormula(room, playerId, payload.expr, now);
   else if (type === "concede") concedePlayer(room, playerId, now);
   else if (type === "quick_chat") quickChat(room, playerId, payload.id, now);
+  else if (type === "rematch_vote") setRematchVote(room, playerId, payload.agreed !== false, { now, random: options && options.random });
   else if (type === "heartbeat") return { type: "pong", ts: now };
   else throw new Error("未知操作: " + type);
   return { type: "ok", version: room.version };
@@ -838,6 +907,7 @@ module.exports = {
   submitFormula,
   concedePlayer,
   quickChat,
+  setRematchVote,
   createPresenceUpdate,
   applyAction,
   cardFace,

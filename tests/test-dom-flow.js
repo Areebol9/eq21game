@@ -18,6 +18,7 @@ const SCRIPT_ORDER = [
   "js/config.js",
   "js/expression.js",
   "js/history.js",
+  "js/icons.js",
   "js/ui.js",
   "js/online.js",
   "js/game.js",
@@ -329,6 +330,7 @@ function createDocument() {
     "log-shell", "btn-log-toggle", "log-toggle-count",
     "main-container",
     "menu-overlay", "table-setup-overlay", "ai-setup-overlay", "result-overlay",
+    "result-rematch-status",
     "hint-area", "stats-panel", "players-area", "tabletop-center", "log-panel",
     "footer-bar", "toast-container", "victory-overlay", "table-name-inputs",
     "ai-player-name", "result-icon", "result-title", "result-detail",
@@ -472,6 +474,61 @@ section("table setup defaults and player count");
   env.run("renderAll = function() {}; updateFooterBar = function() {}; startTimer = function() {}; addLog = function() {}; showToast = function() {};");
   env.run("startLocalGame()");
   assert("starting local game uses selected player count", env.run("game.players.length"), 4);
+}
+
+section("local rematch reuses remaining deck");
+{
+  const env = createEnv();
+  env.run(`
+    init();
+    renderAll = function() {};
+    updateFooterBar = function() {};
+    startTimer = function() {};
+    stopTimer = function() {};
+    addLog = function() {};
+    showToast = function(message) { __toast = message; };
+    game.mode = 'local';
+    game.phase = 'ended';
+    game.players = [
+      { name: 'P1', hand: [9, 9, 9], conceded: false, feedback: 'win', feedbackType: 'ok', inputDraft: '9+9+9' },
+      { name: 'P2', hand: [8, 8, 8], conceded: true, feedback: 'lost', feedbackType: '', inputDraft: '8+8+8' }
+    ];
+    game.deck = [1, 2, 3, 4, 5, 6, 7, 8];
+    document.getElementById('table-setup-overlay').classList.remove('hidden');
+    showResult(0);
+    handleAgainGame();
+  `);
+  assert("local rematch starts playing", env.run("game.phase"), "playing");
+  assert("local rematch keeps player order", env.run("game.players.map(p => p.name).join(',')"), "P1,P2");
+  assert("local rematch deals from current deck", env.run("JSON.stringify(game.players.map(p => p.hand))"), "[[8,7,6],[5,4,3]]");
+  assert("local rematch leaves old hands out of deck", env.run("game.deck.includes(9)"), false);
+  assert("local rematch consumes only dealt cards", env.run("JSON.stringify(game.deck)"), "[1,2]");
+  assert("local rematch hides setup overlay", env.document.getElementById("table-setup-overlay").classList.contains("hidden"), true);
+  assert("local rematch hides result overlay", env.document.getElementById("result-overlay").classList.contains("hidden"), true);
+
+  const shortEnv = createEnv();
+  shortEnv.run(`
+    init();
+    renderAll = function() {};
+    updateFooterBar = function() {};
+    startTimer = function() {};
+    stopTimer = function() {};
+    addLog = function() {};
+    showToast = function(message) { __toast = message; };
+    game.mode = 'local';
+    game.phase = 'ended';
+    game.players = [
+      { name: 'P1', hand: [1, 1, 1], conceded: false, feedback: 'win', feedbackType: 'ok', inputDraft: '' },
+      { name: 'P2', hand: [2, 2, 2], conceded: false, feedback: '', feedbackType: '', inputDraft: '' }
+    ];
+    game.deck = [3, 4, 5, 6, 7];
+    showResult(0);
+    handleAgainGame();
+  `);
+  assert("local rematch with short deck remains ended", shortEnv.run("game.phase"), "ended");
+  assert("local rematch with short deck does not deal", shortEnv.run("JSON.stringify(game.players.map(p => p.hand))"), "[[1,1,1],[2,2,2]]");
+  assert("local rematch with short deck disables button", shortEnv.document.getElementById("btn-again").disabled, true);
+  assert("local rematch with short deck shows shortage", shortEnv.document.getElementById("result-rematch-status").textContent.includes("牌库不足"), true);
 }
 
 section("header buttons, keyboard activation, and log collapse");
@@ -628,6 +685,7 @@ section("online ended reconnect does not reopen result or duplicate history");
         schemaVersion: 1,
         roomCode: 'ROOM42',
         phase: phase,
+        round: 1,
         difficulty: 'easy',
         target: 21,
         maxPlayers: 2,
@@ -637,6 +695,10 @@ section("online ended reconnect does not reopen result or duplicate history");
         startedAt: 100000,
         endedAt: phase === 'ended' ? 121000 : null,
         deckCount: 10,
+        rematchVotes: {},
+        rematchAgreedCount: 0,
+        rematchNeededCount: 2,
+        canRematch: phase === 'ended',
         version: version,
         events: [],
         you: { playerId: 'p2', seatToken: 'p2-token', isHost: false },
@@ -655,17 +717,19 @@ section("online ended reconnect does not reopen result or duplicate history");
   assert("live online ending plays win sound once", env.run("__winSounds"), 1);
   assert("live online ending triggers victory effect once", env.run("__victoryEffects"), 1);
   assert("live online ending writes one history record", history.records.length, 1);
-  assert("online history stores stable result key", history.records[0].onlineResultKey, "ROOM42:9:p2");
-  assert("online result key is persisted", env.storage.has("eq21_online_result_ROOM42:9:p2"), true);
+  assert("online history stores stable result key", history.records[0].onlineResultKey, "ROOM42:r1:p2");
+  assert("online result key is persisted", env.storage.has("eq21_online_result_ROOM42:r1:p2"), true);
 
   env.run("handleOnlineMessage(JSON.stringify({ type: 'game_ended', room: makeOnlineRoom('ended', 9) }));");
   history = JSON.parse(env.storage.get("eq21_history"));
   assert("duplicate ended message does not reopen result", env.run("__showResults"), 1);
   assert("duplicate ended message does not duplicate history", history.records.length, 1);
-  env.run("resetGame();");
-  assert("online again clears ended room session", env.run("loadOnlineSession() === null"), true);
-  assert("online again disables reconnect button", env.document.getElementById("btn-online-reconnect").disabled, true);
-  assert("online again returns to online setup", env.document.getElementById("online-setup-overlay").classList.contains("hidden"), false);
+  env.run("onlineSocket = { readyState: 1, send: function(raw) { __lastSent = JSON.parse(raw); } }; handleAgainGame();");
+  assert("online again sends rematch vote", env.run("__lastSent.type"), "rematch_vote");
+  assert("online again votes agree", env.run("__lastSent.payload.agreed"), true);
+  assert("online again keeps ended room session", env.run("loadOnlineSession().roomCode"), "ROOM42");
+  assert("online again does not mark room closed", env.storage.has("eq21_online_closed_ROOM42"), false);
+  assert("online again updates vote status", env.document.getElementById("result-rematch-status").textContent.includes("1/2"), true);
 
   const reconnectEnv = createEnv();
   reconnectEnv.run(`
@@ -717,7 +781,7 @@ section("online ended reconnect does not reopen result or duplicate history");
   const existingEnv = createEnv();
   existingEnv.storage.set("eq21_history", JSON.stringify({
     version: 1,
-    records: [{ id: "old", mode: "online", player: "P2", result: "win", onlineResultKey: "ROOM44:9:p2" }]
+    records: [{ id: "old", mode: "online", player: "P2", result: "win", onlineResultKey: "ROOM44:r1:p2" }]
   }));
   existingEnv.run(`
     init();

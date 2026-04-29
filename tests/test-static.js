@@ -88,6 +88,24 @@ assert("index.html loads deploy config before online client",
   scripts.indexOf("js/deploy-config.js") < scripts.indexOf("js/online.js"),
   `scripts: ${scripts.join(", ")}`
 );
+assert("index.html loads local icon helper before UI script",
+  scripts.indexOf("js/icons.js") !== -1 &&
+  scripts.indexOf("js/ui.js") !== -1 &&
+  scripts.indexOf("js/icons.js") < scripts.indexOf("js/ui.js"),
+  `scripts: ${scripts.join(", ")}`
+);
+assert("main menu uses full-screen home surface",
+  /id=["']menu-overlay["']\s+class=["']home-screen["']/.test(indexHtml),
+  "menu-overlay should not reuse the generic dark overlay"
+);
+assert("core navigation and mode entry icons use local SVG hooks",
+  !/[📖🔊🔇📜🐣🦊🧠⚔️🏆🤝]/u.test((indexHtml.match(/<div id=["']header-bar["'][\s\S]*?<div id=["']rules-overlay["']/) || [""])[0]),
+  "header/menu/setup/result markup should avoid emoji entry icons"
+);
+assert("result icon is initialized through SVG icon hook",
+  /id=["']result-icon["'][^>]*data-icon=["']trophy["']/.test(indexHtml),
+  "missing data-icon on result icon"
+);
 
 for (const href of stylesheets) checkExists(href, "stylesheet exists");
 for (const href of manifests) checkExists(href, "manifest exists");

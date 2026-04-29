@@ -41,6 +41,14 @@ function initLogPanel() {
   updateLogToggleCount();
 }
 
+function uiIcon(name, extraClass, label) {
+  return typeof svgIcon === 'function' ? svgIcon(name, extraClass || '', label || '') : '';
+}
+
+function footerIcon(name) {
+  return '<span class="icon">' + uiIcon(name) + '</span>';
+}
+
 // ==================== 底部信息栏 + 提示 ====================
 let _autoHintTimer = null;
 function clearSolutionHint() {
@@ -57,36 +65,36 @@ function clearSolutionHint() {
 
 function updateFooterBar() {
   const fb = document.getElementById('footer-bar');
-  if (game.phase === 'menu') { fb.innerHTML = '<span class="icon">♠</span> 选择游戏模式开始吧！'; return; }
-  if (game.phase === 'ended') { fb.innerHTML = '<span class="icon">♠</span> 游戏结束！'; return; }
+  if (game.phase === 'menu') { fb.innerHTML = footerIcon('card') + '选择游戏模式开始吧！'; return; }
+  if (game.phase === 'ended') { fb.innerHTML = footerIcon('trophy') + '游戏结束！'; return; }
   const isSolo = game.mode === 'solo';
   const isAi = game.mode === 'ai';
   if (isSolo) {
     const p = game.players[0];
-    if (!p || p.conceded) { fb.innerHTML = '<span class="icon">♠</span> 你已认输'; return; }
+    if (!p || p.conceded) { fb.innerHTML = footerIcon('single') + '你已认输'; return; }
     if (game.aiThinking) {
-      fb.innerHTML = '<span class="icon">♠</span> AI思考中...剩余' + game.aiCountdown + 's';
+      fb.innerHTML = footerIcon('ai') + 'AI思考中...剩余' + game.aiCountdown + 's';
     } else {
-      fb.innerHTML = '<span class="icon">♠</span> 手牌' + p.hand.length + '张 | 输入算式后提交 | 💡提示剩余' + (game.stats ? game.stats.maxHints - game.stats.hintsUsed : 0) + '次';
+      fb.innerHTML = footerIcon('card') + '手牌' + p.hand.length + '张 | 输入算式后提交 | 提示剩余' + (game.stats ? game.stats.maxHints - game.stats.hintsUsed : 0) + '次';
     }
   } else if (isAi) {
     const human = game.players[0];
     const ai = game.players[1];
-    if (human && human.conceded) { fb.innerHTML = '<span class="icon">♠</span> 你已认输'; return; }
+    if (human && human.conceded) { fb.innerHTML = footerIcon('single') + '你已认输'; return; }
     if (game.aiThinking) {
-      fb.innerHTML = '<span class="icon">♠</span> 🤖 对手在思考...' + game.aiCountdown + 's';
+      fb.innerHTML = footerIcon('ai') + '对手在思考...' + game.aiCountdown + 's';
     } else if (game.aiSolved) {
-      fb.innerHTML = '<span class="icon">♠</span> 🤖 对手似乎已经找到答案！';
+      fb.innerHTML = footerIcon('ai') + '对手似乎已经找到答案！';
     } else {
-      fb.innerHTML = '<span class="icon">♠</span> 快！尽快算出' + game.target + '！ | 你的手牌' + human.hand.length + '张';
+      fb.innerHTML = footerIcon('target') + '快！尽快算出' + game.target + '！ | 你的手牌' + human.hand.length + '张';
     }
   } else if (game.mode === 'local') {
-    fb.innerHTML = '<span class="icon">♥</span> 围桌中 · ' + game.players.filter(p => !p.conceded).length + '人对弈 · 牌库' + game.deck.length + ' · 🎯' + game.target;
+    fb.innerHTML = footerIcon('table') + '围桌中 · ' + game.players.filter(p => !p.conceded).length + '人对弈 · 牌库' + game.deck.length + ' · 目标 ' + game.target;
   } else if (game.mode === 'online') {
     const state = game.online.connected ? '已连接' : (game.online.connecting ? '连接中' : '离线');
     const room = game.online.roomCode ? '房间 ' + game.online.roomCode + ' · ' : '';
-    if (game.phase === 'lobby') fb.innerHTML = '<span class="icon">♣</span> ' + room + state + ' · 等待房主开局';
-    else fb.innerHTML = '<span class="icon">♣</span> ' + room + state + ' · ' + game.players.filter(p => !p.conceded).length + '人在线对弈 · 牌库' + game.deck.length;
+    if (game.phase === 'lobby') fb.innerHTML = footerIcon('online') + room + state + ' · 等待房主开局';
+    else fb.innerHTML = footerIcon('online') + room + state + ' · ' + game.players.filter(p => !p.conceded).length + '人在线对弈 · 牌库' + game.deck.length;
   }
 }
 
@@ -130,14 +138,15 @@ function triggerVictoryEffect() {
   vo.style.animation = 'none'; void vo.offsetWidth; vo.style.animation = 'victoryPulse .6s ease-out';
   setTimeout(() => vo.classList.add('hidden'), 700);
 
-  const emojis = ['🎉', '🎊', '✨', '🌟', '💫', '🏆', '👑', '🎯', '🔥', '💥', '🃏', '⭐'];
+  const icons = ['sparkle', 'star', 'trophy', 'crown', 'target', 'card'];
   for (let i = 0; i < 30; i++) {
     setTimeout(() => {
       const el = document.createElement('div');
       el.className = 'confetti';
-      el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      el.innerHTML = uiIcon(icons[Math.floor(Math.random() * icons.length)], 'confetti-icon');
       el.style.left = Math.random() * 100 + '%';
       el.style.top = -(Math.random() * 40 + 10) + 'px';
+      el.style.transform = 'rotate(' + Math.floor(Math.random() * 180) + 'deg)';
       el.style.animationDuration = (Math.random() * 1.5 + 2) + 's';
       document.body.appendChild(el);
       setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3000);
@@ -207,10 +216,10 @@ function renderAll() {
 
     const st = document.createElement('span'); st.className = 'player-status';
     if (p.isAi && game.aiThinking && game.phase === 'playing' && !p.conceded) {
-      st.textContent = '🤖 思考中... ' + game.aiCountdown + 's';
+      st.innerHTML = uiIcon('ai', 'status-inline-icon') + ' 思考中... ' + game.aiCountdown + 's';
       st.className += ' thinking';
     } else if (game.phase === 'ended' && p.feedbackType === 'ok') {
-      st.textContent = '🏆 获胜'; st.className += ' won';
+      st.innerHTML = uiIcon('trophy', 'status-inline-icon') + ' 获胜'; st.className += ' won';
     } else if (p.conceded) {
       st.textContent = '认输'; st.className += ' lost';
     } else {
@@ -293,14 +302,14 @@ function renderAll() {
 
     if (isSolo) {
       const btnHint = document.createElement('button');
-      btnHint.className = 'btn-hint'; btnHint.textContent = '💡提示(' + (game.stats.maxHints - game.stats.hintsUsed) + ')';
+      btnHint.className = 'btn-hint'; btnHint.innerHTML = uiIcon('rules', 'btn-inline-icon') + '提示(' + (game.stats.maxHints - game.stats.hintsUsed) + ')';
       btnHint.disabled = (game.phase !== 'playing' || game.stats.hintsUsed >= game.stats.maxHints || game.aiThinking);
       btnHint.onclick = () => showHint();
       act.appendChild(btnHint);
       if (game.difficulty !== 'easy') {
         const btnCool = document.createElement('button');
         btnCool.className = 'btn-hint btn-cool';
-        btnCool.textContent = '🎩妙解';
+        btnCool.innerHTML = uiIcon('sparkle', 'btn-inline-icon') + '妙解';
         btnCool.disabled = (game.phase !== 'playing' || game.aiThinking);
         btnCool.onclick = () => showCoolHint();
         act.appendChild(btnCool);
@@ -363,7 +372,7 @@ function renderAll() {
   if (isSolo && game.phase === 'playing') {
     const sp = document.getElementById('stats-panel');
     sp.classList.remove('hidden');
-    sp.innerHTML = '📊 提交:<span>' + game.stats.submits + '</span> | 提示:<span>' + game.stats.hintsUsed + '/' + game.stats.maxHints + '</span> | 加牌:<span>' + game.stats.draws + '</span>';
+    sp.innerHTML = uiIcon('history', 'stats-inline-icon') + ' 提交:<span>' + game.stats.submits + '</span> | 提示:<span>' + game.stats.hintsUsed + '/' + game.stats.maxHints + '</span> | 加牌:<span>' + game.stats.draws + '</span>';
   } else { document.getElementById('stats-panel').classList.add('hidden'); }
 
   if (!isSolo) document.getElementById('hint-area').classList.add('hidden');
@@ -433,7 +442,7 @@ function renderTabletop() {
     hdr.appendChild(dot);
     hdr.appendChild(document.createTextNode(p.name));
     const st = document.createElement('span'); st.className = 'player-status';
-    if (game.phase === 'ended' && p.feedbackType === 'ok') { st.textContent = '🏆 获胜'; st.className += ' won'; }
+    if (game.phase === 'ended' && p.feedbackType === 'ok') { st.innerHTML = uiIcon('trophy', 'status-inline-icon') + ' 获胜'; st.className += ' won'; }
     else if (p.conceded) { st.textContent = '认输'; st.className += ' lost'; }
     else { st.textContent = '手牌' + p.hand.length + '张'; }
     hdr.appendChild(st); card.appendChild(hdr);
@@ -617,10 +626,15 @@ function renderOnlineLobby() {
     row.className = 'online-seat-row';
     if (player.id === game.online.playerId) row.classList.add('mine');
     const left = document.createElement('span');
-    left.textContent = 'P' + (idx + 1) + ' · ' + (player.host ? '👑 房主 · ' : '') + player.name;
+    left.className = 'online-seat-name';
+    left.innerHTML = '<span class="seat-index">P' + (idx + 1) + '</span>' +
+      (player.host ? '<span class="seat-host">' + uiIcon('crown', 'seat-host-icon') + '房主</span>' : '') +
+      '<span class="seat-player-name">' + escapeHtml(player.name) + '</span>';
     const right = document.createElement('span');
     right.className = player.connected ? 'online-ready' : 'online-offline';
-    right.textContent = player.connected ? (player.ready ? '已准备' : '未准备') : '短线离席';
+    right.innerHTML = player.connected
+      ? uiIcon(player.ready ? 'check' : 'wait', 'status-inline-icon') + (player.ready ? '已准备' : '未准备')
+      : uiIcon('onlineOff', 'status-inline-icon') + '短线离席';
     row.appendChild(left);
     row.appendChild(right);
     list.appendChild(row);
@@ -642,17 +656,17 @@ function renderOnlineLobby() {
   actions.className = 'online-lobby-actions';
   const ready = document.createElement('button');
   ready.className = 'btn-lobby-primary' + (isReady ? ' btn-ready-active' : '');
-  ready.textContent = isReady ? '✓ 已准备' : '准备';
+  ready.innerHTML = isReady ? uiIcon('check', 'btn-inline-icon') + '已准备' : '准备';
   ready.disabled = !game.online.connected;
   ready.onclick = function() {
     var newReady = !(myPlayer && myPlayer.ready);
     sendOnlineAction("ready", { ready: newReady });
-    ready.textContent = newReady ? '✓ 已准备' : '准备';
+    ready.innerHTML = newReady ? uiIcon('check', 'btn-inline-icon') + '已准备' : '准备';
     if (newReady) { ready.classList.add('btn-ready-active'); }
     else { ready.classList.remove('btn-ready-active'); }
     if (myPlayer) myPlayer.ready = newReady;
     var rightEls = document.querySelectorAll('.online-seat-row.mine .online-ready');
-    if (rightEls.length) rightEls[0].textContent = newReady ? '已准备' : '未准备';
+    if (rightEls.length) rightEls[0].innerHTML = uiIcon(newReady ? 'check' : 'wait', 'status-inline-icon') + (newReady ? '已准备' : '未准备');
   };
   actions.appendChild(ready);
   const start = document.createElement('button');

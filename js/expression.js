@@ -209,14 +209,14 @@ function rateSolution(expr, difficulty, handLength) {
   if (ops.hasPow) { score += 180; tags.push('🔮幂指神算'); }
   if (ops.hasSqrt) { score += 200; tags.push('📐开方妙用'); }
   if (ops.hasFact) { score += 300; tags.push('💥阶乘狂人'); }
-  if (handLength >= 5) { score += 80; tags.push('🃏五牌逆转'); }
+  if (handLength >= 5) { score += 80; tags.push('五牌逆转'); }
   if (difficulty === 'normal' && (ops.hasPow || ops.hasSqrt)) score += 80;
   if (difficulty === 'hard' && ops.hasFact) score += 100;
   if (ops.hasDiv && /\/[23456789JQK)]/.test(expr)) score += 40;
   if (/\b20\b|\b24\b|\b7\*3\b|\b3\*7\b/.test(expr)) score += 60;
-  if (score >= 420) tags.push('🎩妙手天成');
+  if (score >= 420) tags.push('妙手天成');
   else if (score >= 260) tags.push('✨炫技解法');
-  else if (score >= 160) tags.push('🧠奇思妙算');
+  else if (score >= 160) tags.push('奇思妙算');
   return { score, tags, ops, complexity: ops.opCount + Math.floor(String(expr || '').length / 8) };
 }
 

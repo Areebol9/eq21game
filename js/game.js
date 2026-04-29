@@ -255,7 +255,7 @@ function showHint() {
         '🧐 还差一点火候，再补一张也许就亮了',
         '😅 这组牌挺倔，换一组会更轻松'
       ];
-      showToast('💡 提示 #' + level + '：' + msgs[Math.min(level - 1, msgs.length - 1)], 'error');
+      showToast('提示 #' + level + '：' + msgs[Math.min(level - 1, msgs.length - 1)], 'error');
       addLog('提示 #' + level + '：当前手牌暂未找到解', 'hint');
     } else if (level === 1) {
       const sol = solutions[0];
@@ -267,7 +267,7 @@ function showHint() {
       if (hasSub) parts.push('减法');
       if (!parts.length) parts.push('组合');
       const firstStep = extractFirstStep(sol);
-      let hintMsg = '💡 提示 #1：这手牌可以往 ' + parts.join(' 和 ') + ' 方向试';
+      let hintMsg = '提示 #1：这手牌可以往 ' + parts.join(' 和 ') + ' 方向试';
       if (firstStep) hintMsg += '，先盯住「' + firstStep + '」';
       showToast(hintMsg, 'submit');
       addLog('提示 #1：方向性提示已显示', 'hint');
@@ -279,22 +279,22 @@ function showHint() {
         if (tokens.length === 3 && tokens[0].type === TOK_NUM && tokens[1].type === TOK_OP && tokens[2].type === TOK_NUM) {
           try {
             const subVal = evaluate(firstStep);
-            showToast('💡 提示 #2：先算出「' + firstStep + ' = ' + formatNum(subVal) + '」，再处理剩余牌', 'submit');
+            showToast('提示 #2：先算出「' + firstStep + ' = ' + formatNum(subVal) + '」，再处理剩余牌', 'submit');
             addLog('提示 #2：中间值提示  → ' + firstStep + ' = ' + formatNum(subVal), 'hint');
           } catch (e) {
-            showToast('💡 提示 #2：尝试从「' + firstStep + '」开始', 'submit');
+            showToast('提示 #2：尝试从「' + firstStep + '」开始', 'submit');
             addLog('提示 #2：模糊步骤提示', 'hint');
           }
         } else {
-          showToast('💡 提示 #2：试试先把几张牌合成一个关键中间值', 'submit');
+          showToast('提示 #2：试试先把几张牌合成一个关键中间值', 'submit');
           addLog('提示 #2：模糊步骤提示', 'hint');
         }
       } else {
-        showToast('💡 提示 #2：试着先合并其中两张牌', 'submit');
+        showToast('提示 #2：试着先合并其中两张牌', 'submit');
         addLog('提示 #2：模糊步骤提示', 'hint');
       }
     } else {
-      showToast('💡 答案：' + solutions[0] + ' = 21', 'win');
+      showToast('答案：' + solutions[0] + ' = 21', 'win');
       addLog('提示 #3（答案）：' + solutions[0] + ' = 21', 'hint');
     }
     renderAll();
@@ -324,10 +324,10 @@ function showCoolHint() {
     const solution = cache.cool[0];
     const why = describeCoolSolution(solution, p ? p.hand.length : 0);
     State.set('coolHintUsed', true);
-    showToast('🎩 妙解思路：' + why + '。' + solution.expr + ' = 21', 'win');
+    showToast('妙解思路：' + why + '。' + solution.expr + ' = 21', 'win');
     addLog('妙解提示：' + why + ' → ' + solution.expr + ' = 21', 'hint');
     if (p) {
-      p.feedback = '🎩 妙解：' + why + '｜' + solution.expr;
+      p.feedback = '妙解：' + why + '｜' + solution.expr;
       p.feedbackType = 'info';
     }
     renderAll();
@@ -348,15 +348,15 @@ function submitFormula(idx) {
   if (!handValidation.valid) {
     let fbMsg;
     if (handValidation.reason === 'notAllUsed') {
-      fbMsg = '⚠️ 还有 ' + handValidation.missing + ' 张牌没用！手牌必须全部用完哦~';
+      fbMsg = '还有 ' + handValidation.missing + ' 张牌没用！手牌必须全部用完哦~';
     } else if (handValidation.reason === 'extraCards') {
-      fbMsg = '🕵️ 多了 ' + handValidation.extra + ' 张牌！请不要使用不属于你的牌~';
+      fbMsg = '多了 ' + handValidation.extra + ' 张牌！请不要使用不属于你的牌~';
     } else if (handValidation.reason === 'noMatch') {
-      fbMsg = '🃏 你没有用到任何手牌！请用手牌中的数字（' + p.hand.map(cardFace).join(' ') + '）组成算式~';
+      fbMsg = '你没有用到任何手牌！请用手牌中的数字（' + p.hand.map(cardFace).join(' ') + '）组成算式~';
     } else if (handValidation.reason === 'invalidNumbers') {
       fbMsg = '🚫 你用了不存在的牌值 ' + handValidation.invalidVals.join(', ') + '！牌面数字只能是 1~13（A=1, J=11, Q=12, K=13）';
     } else {
-      fbMsg = '🕵️ 手牌不匹配！请检查是否用了不属于你的牌~';
+      fbMsg = '手牌不匹配！请检查是否用了不属于你的牌~';
     }
     setFeedback(idx, fbMsg, 'err');
     addLog(p.name + ' 提交了算式，但手牌不匹配 ❌', 'err');
@@ -432,13 +432,13 @@ function submitFormula(idx) {
       }
     }
 
-    p.feedback = '🎉 =' + game.target + ' 获胜！+' + game.currentScore + '分';
+    p.feedback = '=' + game.target + ' 获胜！+' + game.currentScore + '分';
 
     p.feedbackType = 'ok';
     setFeedback(idx, p.feedback, 'ok');
-    var winMsg = '🏆 ' + p.name + ' 提交算式 "' + expr + '" = ' + game.target + ' 获胜！！！+' + game.currentScore + '分';
+    var winMsg = p.name + ' 提交算式 "' + expr + '" = ' + game.target + ' 获胜！！！+' + game.currentScore + '分';
     addLog(winMsg, 'win');
-    var toastWin = '🎉 ' + p.name + ' 获胜！答案 = ' + game.target + ' +' + game.currentScore + '分';
+    var toastWin = p.name + ' 获胜！答案 = ' + game.target + ' +' + game.currentScore + '分';
     if (game.solutionRating && game.solutionRating.score >= 160) {
       var tags = game.solutionRating.tags || [];
       var levelTag = '';
@@ -453,19 +453,19 @@ function submitFormula(idx) {
     document.getElementById('hint-area').classList.add('hidden');
     soundPlay('win'); triggerVictoryEffect();
     showResult(idx); renderAll();
-    if (game.mode === 'local') updateTcEvent('🏆 ' + p.name + ' 获胜！');
+    if (game.mode === 'local') updateTcEvent(p.name + ' 获胜！');
   } else {
     const diff = result - game.target;
     const absDiff = Math.abs(diff);
     let fbMsg, toastMsg;
     if (absDiff <= 2) {
-      fbMsg = '🔥 差一点！= ' + formatNum(result) + '，就差 ' + formatNum(absDiff) + '！';
+      fbMsg = '差一点！= ' + formatNum(result) + '，就差 ' + formatNum(absDiff) + '！';
       toastMsg = p.name + ' 提交 = ' + formatNum(result) + '（只差 ' + formatNum(absDiff) + '！）';
     } else if (absDiff <= 10) {
-      fbMsg = '🤔 偏差 ' + formatNum(absDiff) + '，考虑用乘除调整试试';
+      fbMsg = '偏差 ' + formatNum(absDiff) + '，考虑用乘除调整试试';
       toastMsg = p.name + ' 提交 = ' + formatNum(result) + '（偏差 ' + formatNum(absDiff) + '）';
     } else {
-      fbMsg = '📉 偏了 ' + formatNum(absDiff) + '，离21有点远…';
+      fbMsg = '偏了 ' + formatNum(absDiff) + '，离21有点远…';
       toastMsg = p.name + ' 提交 = ' + formatNum(result) + '（差太远了）';
     }
     setFeedback(idx, fbMsg, 'err');
@@ -483,8 +483,8 @@ function drawForPlayer(idx) {
   if (!game.deck.length) { setFeedback(idx, '牌库已空', 'err'); return; }
   const card = drawCard(); if (card === null) return;
   p.hand.push(card); p.feedback = '加牌: +' + cardFace(card); p.feedbackType = 'ok';
-  addLog('🃏 ' + p.name + ' 加了一张牌 → ' + cardFace(card) + ' (手牌' + p.hand.length + '张)', 'info');
-  showToast('🃏 ' + p.name + ' +牌 → ' + cardFace(card), 'draw');
+  addLog(p.name + ' 加了一张牌 → ' + cardFace(card) + ' (手牌' + p.hand.length + '张)', 'info');
+  showToast(p.name + ' +牌 → ' + cardFace(card), 'draw');
   if (game.mode === 'solo') { game.stats.draws++; _lastCheckedHand = ''; resetSolutionCache(); }
   p._newCardIdx = p.hand.length - 1;
   updateDeckCount(); renderAll(); updateFooterBar();
@@ -513,8 +513,8 @@ function concedePlayer(idx) {
     });
   }
 
-  addLog('🏳️ ' + p.name + ' 举白旗了！', 'info');
-  showToast('🏳️ ' + p.name + ' 认输', 'concede');
+  addLog(p.name + ' 认输了', 'info');
+  showToast(p.name + ' 认输', 'concede');
   if (game.mode === 'local') updateTcEvent(p.name + ' 认输');
   renderAll(); updateFooterBar();
   checkGameEnd();
@@ -525,13 +525,13 @@ function checkGameEnd() {
   const active = game.players.filter(p => !p.conceded);
   if (active.length === 0) {
     State.set('phase', 'ended'); stopTimer(); stopAiThinking();
-    addLog('所有玩家都认输了，本局无胜者 🤝', 'info');
+    addLog('所有玩家都认输了，本局无胜者', 'info');
     showResult(-1); renderAll(); return;
   }
   if (game.mode === 'ai' && active.length === 1 && active[0].isAi) {
     State.set('phase', 'ended'); stopTimer(); stopAiThinking();
     const ai = game.players[game.aiPlayerIndex];
-    ai.feedback = '🎉 对手认输，AI获胜！'; ai.feedbackType = 'ok';
+    ai.feedback = '对手认输，AI获胜！'; ai.feedbackType = 'ok';
 
     // 记录人类玩家失败
     const humanIdx = game.aiPlayerIndex === 0 ? 1 : 0;
@@ -549,8 +549,8 @@ function checkGameEnd() {
       });
     }
 
-    addLog('🤖 AI获胜！所有人类玩家已认输', 'win');
-    showToast('🤖 AI获胜！', 'win');
+    addLog('AI获胜！所有人类玩家已认输', 'win');
+    showToast('AI获胜！', 'win');
     triggerVictoryEffect();
     showResult(game.aiPlayerIndex); renderAll();
   }
@@ -603,7 +603,7 @@ function scheduleAiThink() {
       const card = document.querySelector('.player-card[data-index="' + aiIdx + '"]');
       if (card) {
         const st = card.querySelector('.player-status');
-        if (st && game.aiThinking) st.textContent = '🤖 思考中... ' + Math.max(0, game.aiCountdown) + 's';
+        if (st && game.aiThinking) st.textContent = '思考中... ' + Math.max(0, game.aiCountdown) + 's';
       }
     }, 1000));
 
@@ -617,8 +617,8 @@ function scheduleAiThink() {
       if (willSucceed && solutions.length > 0) {
         const sol = solutions[0];
         ai.inputDraft = sol;
-        addLog('🤖 ' + ai.name + ' 得意地提交了答案！', 'info');
-        showToast('🤖 ' + ai.name + ' 提交了答案！', 'submit');
+        addLog(ai.name + ' 提交了答案！', 'info');
+        showToast(ai.name + ' 提交了答案！', 'submit');
         renderAll();
         setTimeout(() => {
           const input = document.querySelector('.player-card[data-index="' + aiIdx + '"] .formula-input');
@@ -628,15 +628,15 @@ function scheduleAiThink() {
       } else {
         if (ai.hand.length >= game.maxCards || !game.deck.length) {
           ai.conceded = true; ai.feedback = 'AI认输'; ai.feedbackType = '';
-          addLog('🤖 ' + ai.name + ' 挠了挠头，表示放弃…', 'info');
-          showToast('🤖 ' + ai.name + ' 认输🏳️', 'concede');
+          addLog(ai.name + ' 表示放弃', 'info');
+          showToast(ai.name + ' 认输', 'concede');
           checkGameEnd();
         } else {
           const card = drawCard();
           if (card !== null) {
             ai.hand.push(card);
-            addLog('🤖 ' + ai.name + ' 想不出，加了一张牌 → ' + cardFace(card) + ' (手牌' + ai.hand.length + '张)', 'info');
-            showToast('🤖 ' + ai.name + ' +牌 → ' + cardFace(card), 'draw');
+            addLog(ai.name + ' 想不出，加了一张牌 → ' + cardFace(card) + ' (手牌' + ai.hand.length + '张)', 'info');
+            showToast(ai.name + ' +牌 → ' + cardFace(card), 'draw');
             updateDeckCount();
             if (game.phase === 'playing') scheduleAiThink();
           }
@@ -687,7 +687,7 @@ function goToMenu() {
   document.getElementById('players-area').classList.remove('tabletop-2p', 'tabletop-3p', 'tabletop-4p');
   if (tc) { document.getElementById('main-container').appendChild(tc); tc.classList.add('hidden'); }
   document.getElementById('log-panel').innerHTML = '';
-  document.getElementById('footer-bar').innerHTML = '<span class="icon">♠</span> 准备开始游戏...';
+  document.getElementById('footer-bar').innerHTML = (typeof footerIcon === 'function' ? footerIcon('card') : '<span class="icon">♠</span>') + '准备开始游戏...';
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   document.getElementById('menu-overlay').classList.remove('hidden');
@@ -776,6 +776,98 @@ function dealCards() {
   }
 }
 
+function resetRoundMeta(maxHints) {
+  State.set('stats', { submits: 0, hintsUsed: 0, maxHints: maxHints, draws: 0 });
+  State.set('currentScore', 0);
+  State.set('scoreBreakdown', []);
+  State.set('solutionRating', null);
+  State.set('gameTags', []);
+}
+
+function localRematchNeededCards() {
+  return game.mode === 'local' ? game.players.length * 3 : 0;
+}
+
+function canStartLocalRematch() {
+  return game.mode === 'local' && game.players.length >= 2 && game.deck.length >= localRematchNeededCards();
+}
+
+function updateResultAgainButton() {
+  const btn = document.getElementById('btn-again');
+  const status = document.getElementById('result-rematch-status');
+  if (!btn) return;
+  btn.disabled = false;
+  btn.textContent = '再来一局';
+  if (status) {
+    status.textContent = '';
+    status.className = '';
+  }
+
+  if (game.mode === 'local') {
+    const needed = localRematchNeededCards();
+    if (!canStartLocalRematch()) {
+      btn.disabled = true;
+      if (status) {
+        status.textContent = '牌库不足：需要 ' + needed + ' 张，当前剩余 ' + game.deck.length + ' 张。请返回菜单重新开局。';
+        status.className = 'result-rematch-status warn';
+      }
+    } else if (status) {
+      status.textContent = '将从当前剩余牌库发牌，上一局手牌不回库。';
+      status.className = 'result-rematch-status';
+    }
+  } else if (game.mode === 'online' && typeof updateOnlineRematchResultUi === 'function') {
+    updateOnlineRematchResultUi();
+  }
+}
+
+function startLocalRematch() {
+  if (game.mode !== 'local') { resetGame(); return; }
+  if (game.phase !== 'ended') return;
+  if (!canStartLocalRematch()) {
+    updateResultAgainButton();
+    showToast('牌库不足，请返回菜单重新开局', 'error');
+    return;
+  }
+  stopTimer(); stopAiThinking();
+  resetSolutionCache();
+  if (typeof clearSolutionHint === 'function') clearSolutionHint();
+  State.set('phase', 'playing');
+  resetRoundMeta(0);
+  State.set('_firstRender', true);
+  State.set('_maxHintShown', false);
+  _lastCheckedHand = '';
+  game.players.forEach(player => {
+    player.hand = [];
+    player.conceded = false;
+    player.feedback = '';
+    player.feedbackType = '';
+    player.inputDraft = '';
+    player._newCardIdx = undefined;
+    player._remoteExprPulse = false;
+    for (let j = 0; j < 3; j++) {
+      const card = drawCard();
+      if (card !== null) player.hand.push(card);
+    }
+  });
+  updateDeckCount();
+  startTimer();
+  document.getElementById('result-overlay').classList.add('hidden');
+  document.getElementById('table-setup-overlay').classList.add('hidden');
+  addLog('再来一局：从当前剩余牌库重新发牌。', 'info');
+  renderAll();
+  updateFooterBar();
+}
+
+function handleAgainGame() {
+  if (game.mode === 'local') {
+    startLocalRematch();
+  } else if (game.mode === 'online' && typeof onlineToggleRematchVote === 'function') {
+    onlineToggleRematchVote();
+  } else {
+    resetGame();
+  }
+}
+
 function startSoloGame() {
   if (typeof clearSolutionHint === 'function') clearSolutionHint();
   resetSolutionCache();
@@ -786,8 +878,8 @@ function startSoloGame() {
   updateDeckCount(); startTimer();
   document.getElementById('result-overlay').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
-  addLog('🧑‍💻 单人练习开始！试试用算式算出' + game.target + '吧', 'info');
-  addLog('💡 点击提示按钮获取帮助（共' + game.stats.maxHints + '次）', 'info');
+  addLog('单人练习开始！试试用算式算出' + game.target + '吧', 'info');
+  addLog('点击提示按钮获取帮助（共' + game.stats.maxHints + '次）', 'info');
   renderAll(); updateFooterBar(); updateSolutionHint();
 }
 
@@ -807,7 +899,7 @@ function startLocalGame() {
   document.getElementById('table-setup-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
   const playerLabels = { 2: '双人对坐', 3: '三人围桌', 4: '四方会战' };
-  addLog('🃏 围桌对战开始！' + (playerLabels[count] || '') + '，谁先用算式算出' + game.target + '谁获胜！', 'info');
+  addLog('围桌对战开始！' + (playerLabels[count] || '') + '，谁先用算式算出' + game.target + '谁获胜！', 'info');
   renderAll(); updateFooterBar();
 }
 
@@ -815,7 +907,7 @@ function startAiGame() {
   const nameInput = document.getElementById('ai-player-name');
   const playerName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : '玩家';
   const aiLevelNames = { easy: '新手赌徒', medium: '老练玩家', hard: '数学教授' };
-  const aiName = '🤖 ' + aiLevelNames[game.aiLevel];
+  const aiName = 'AI · ' + aiLevelNames[game.aiLevel];
   State.set('aiPlayerIndex', 1);
   initPlayers([playerName, aiName], [false, true]);
   dealCards();
@@ -824,7 +916,7 @@ function startAiGame() {
   updateDeckCount(); startTimer();
   document.getElementById('ai-setup-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
-  addLog('🤖 AI对战开始！对手：' + aiName, 'info');
+  addLog('AI对战开始！对手：' + aiName, 'info');
   addLog('你和AI同时开始思考，先算出21者获胜！', 'info');
   renderAll();
   scheduleAiThink();
@@ -847,7 +939,9 @@ function showResult(winnerIdx) {
 
   if (winnerIdx >= 0) {
     const p = game.players[winnerIdx];
-    icon.textContent = '🏆'; title.textContent = p.name + ' 获胜！';
+    if (typeof setSvgIcon === 'function') setSvgIcon(icon, 'trophy');
+    else icon.textContent = '胜';
+    title.textContent = p.name + ' 获胜！';
     var detailText = '用时 ' + formatTime(game.timerSec) + '，手牌 ' + p.hand.length + ' 张';
 
     if (game.currentScore > 0) {
@@ -866,11 +960,11 @@ function showResult(winnerIdx) {
         const levelTag = (sr.tags || []).find(function(t) {
           return t.indexOf('妙手天成') >= 0 || t.indexOf('炫技解法') >= 0 || t.indexOf('奇思妙算') >= 0;
         }) || '';
-        var emoji = '💎';
-        if (levelTag.indexOf('妙手天成') >= 0) emoji = '🎩';
-        else if (levelTag.indexOf('炫技解法') >= 0) emoji = '✨';
-        else if (levelTag.indexOf('奇思妙算') >= 0) emoji = '🧠';
-        ratingEl.innerHTML = '<span class="rating-badge">' + emoji + '</span>' +
+        var ratingIcon = 'star';
+        if (levelTag.indexOf('妙手天成') >= 0) ratingIcon = 'trophy';
+        else if (levelTag.indexOf('炫技解法') >= 0) ratingIcon = 'sparkle';
+        else if (levelTag.indexOf('奇思妙算') >= 0) ratingIcon = 'aiHard';
+        ratingEl.innerHTML = '<span class="rating-badge">' + (typeof svgIcon === 'function' ? svgIcon(ratingIcon) : '') + '</span>' +
           '<span class="rating-score">' + levelTag + ' · 评分 ' + sr.score + '</span>';
         ratingEl.classList.remove('hidden');
       }
@@ -885,9 +979,12 @@ function showResult(winnerIdx) {
     }
     detail.textContent = detailText;
   } else {
-    icon.textContent = '🤝'; title.textContent = '本局无胜者';
+    if (typeof setSvgIcon === 'function') setSvgIcon(icon, 'handshake');
+    else icon.textContent = '平';
+    title.textContent = '本局无胜者';
     detail.textContent = '经过 ' + formatTime(game.timerSec) + ' 的比拼，无人算出' + game.target;
   }
+  updateResultAgainButton();
 }
 
 function resetGame() {
@@ -904,7 +1001,7 @@ function resetGame() {
   document.getElementById('players-area').classList.remove('tabletop-2p', 'tabletop-3p', 'tabletop-4p');
   if (tc2) { document.getElementById('main-container').appendChild(tc2); tc2.classList.add('hidden'); }
   document.getElementById('log-panel').innerHTML = '';
-  document.getElementById('footer-bar').innerHTML = '<span class="icon">♠</span> 准备开始游戏...';
+  document.getElementById('footer-bar').innerHTML = (typeof footerIcon === 'function' ? footerIcon('card') : '<span class="icon">♠</span>') + '准备开始游戏...';
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   if (game.mode === 'local') {

@@ -447,6 +447,9 @@ function handleOnlineMessage(raw) {
 
 function applyOnlineSnapshot(room) {
   const previousPhase = game.phase;
+  const previousRound = game.online.round || 1;
+  const incomingRound = room.round || 1;
+  const isNewOnlineRound = room.phase === "playing" && previousPhase === "ended" && incomingRound !== previousRound;
   const resultKey = getOnlineResultKey(room, (room.you && room.you.playerId) || game.online.playerId);
   const shouldSettleEnd = room.phase === "ended" &&
     onlineActiveRoomCode === room.roomCode &&
@@ -470,6 +473,11 @@ function applyOnlineSnapshot(room) {
     connecting: false,
     reconnecting: false,
     maxPlayers: room.maxPlayers || 4,
+    round: incomingRound,
+    rematchVotes: room.rematchVotes || {},
+    rematchAgreedCount: room.rematchAgreedCount || 0,
+    rematchNeededCount: room.rematchNeededCount || ((room.players || []).length),
+    canRematch: !!room.canRematch,
     lastSnapshotAt: Date.now(),
     status: "房间 " + room.roomCode + " · " + (room.phase === "lobby" ? "等待开局" : room.phase === "playing" ? "对局中" : "已结束")
   });
@@ -495,7 +503,7 @@ function applyOnlineSnapshot(room) {
     host: !!player.host,
     feedback: player.feedback || "",
     feedbackType: player.feedbackType || "",
-    inputDraft: draftById[player.id] || "",
+    inputDraft: isNewOnlineRound ? "" : (draftById[player.id] || ""),
     isAi: false,
     _newCardIdx: player.feedback && player.feedback.startsWith("+牌 →") ? player.hand.length - 1 : undefined
   })));
@@ -511,6 +519,11 @@ function applyOnlineSnapshot(room) {
   if (room.phase === "playing") {
     onlineActiveRoomCode = room.roomCode;
     onlineSettledResultKey = "";
+    if (isNewOnlineRound) {
+      onlinePresenceSeqByPlayer = {};
+      document.getElementById("result-overlay").classList.add("hidden");
+      showToast("新一局开始", "submit");
+    }
   }
 
   if (shouldSettleEnd && previousPhase !== "ended") {
@@ -526,7 +539,7 @@ function applyOnlineSnapshot(room) {
     }
     onlineLastEndedVersion = room.version;
   }
-  if (room.phase === "ended") markOnlineRoomClosed(room.roomCode);
+  if (room.phase === "ended" && typeof updateOnlineRematchResultUi === "function") updateOnlineRematchResultUi();
 }
 
 function applyOnlinePresence(message) {
@@ -565,7 +578,7 @@ function handleOnlineGameEnded(message) {
     showResult(-1);
   }
   onlineLastEndedVersion = message.room.version;
-  markOnlineRoomClosed(message.room.roomCode);
+  if (typeof updateOnlineRematchResultUi === "function") updateOnlineRematchResultUi();
 }
 
 function handleOnlineRoomEndedError() {
@@ -623,7 +636,7 @@ function updateTimerFromOnlineRoom(room) {
 
 function getOnlineResultKey(room, playerId) {
   if (!room || !room.roomCode || !playerId) return "";
-  return room.roomCode + ":" + (room.version || 0) + ":" + playerId;
+  return room.roomCode + ":r" + (room.round || 1) + ":" + playerId;
 }
 
 function getOnlineResultStorageKey(resultKey) {
@@ -709,6 +722,50 @@ function sendOnlineDraftUpdate(idx, details) {
   return true;
 }
 
+function getMyOnlineRematchVote() {
+  return !!(game.online.rematchVotes && game.online.rematchVotes[game.online.playerId]);
+}
+
+function updateOnlineRematchResultUi() {
+  const btn = document.getElementById("btn-again");
+  const status = document.getElementById("result-rematch-status");
+  if (!btn || game.mode !== "online") return;
+  const agreed = getMyOnlineRematchVote();
+  const agreedCount = game.online.rematchAgreedCount || 0;
+  const neededCount = game.online.rematchNeededCount || game.players.length || 0;
+  btn.textContent = agreed ? "取消同意" : "同意再来一局";
+  btn.disabled = !game.online.connected || game.phase !== "ended" || !game.online.canRematch;
+  if (!status) return;
+  status.className = game.online.canRematch ? "result-rematch-status" : "result-rematch-status warn";
+  if (!game.online.canRematch) {
+    status.textContent = "牌库不足，当前房间无法再来一局。";
+    return;
+  }
+  const votes = game.online.rematchVotes || {};
+  const waiting = game.players
+    .filter(player => !votes[player.id])
+    .map(player => player.name + (player.connected ? "" : "（离线）"));
+  status.textContent = "已同意 " + agreedCount + "/" + neededCount +
+    (waiting.length ? "，等待：" + waiting.join("、") : "，即将开始。");
+}
+
+function onlineToggleRematchVote() {
+  if (game.phase !== "ended") return;
+  if (!game.online.canRematch) {
+    showToast("牌库不足，无法再来一局", "error");
+    updateOnlineRematchResultUi();
+    return;
+  }
+  const nextAgreed = !getMyOnlineRematchVote();
+  if (sendOnlineAction("rematch_vote", { agreed: nextAgreed })) {
+    game.online.rematchVotes = Object.assign({}, game.online.rematchVotes || {});
+    if (nextAgreed) game.online.rematchVotes[game.online.playerId] = true;
+    else delete game.online.rematchVotes[game.online.playerId];
+    game.online.rematchAgreedCount = game.players.filter(player => game.online.rematchVotes[player.id]).length;
+    updateOnlineRematchResultUi();
+  }
+}
+
 function onlineReady() {
   const me = game.players.find(function(p) { return p.id === game.online.playerId; });
   sendOnlineAction("ready", { ready: !(me && me.ready) });
@@ -749,6 +806,5 @@ function onlineLeaveRoom(idx) {
 }
 
 function resetOnlineAfterEnded() {
-  if (game.online && game.online.roomCode) markOnlineRoomClosed(game.online.roomCode);
   disconnectOnline(true);
 }

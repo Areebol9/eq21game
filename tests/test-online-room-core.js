@@ -167,7 +167,7 @@ section("presence draft updates are transient");
   assert("presence does not append event log", room.events.length, beforeEvents);
 }
 
-section("ended rooms are terminal and playing rooms only allow seat reconnect");
+section("ended rooms allow seat reconnect and rematch requires every seat");
 {
   const random = fixedRandom();
   const room = core.createRoom({ roomCode: "TERM01", name: "Host", difficulty: "easy", maxPlayers: 2, now: 8000, random });
@@ -182,8 +182,34 @@ section("ended rooms are terminal and playing rooms only allow seat reconnect");
   room.players[0].hand = [10, 10, 1];
   core.submitFormula(room, room.hostId, "10+10+A", 8600);
   assert("room is ended before terminal checks", room.phase, "ended");
-  assertThrowsCode("ended room rejects token reconnect with room_ended", () => core.joinRoom(room, { name: "P2", playerId: p2.id, seatToken: p2.seatToken, now: 8700 }), "room_ended");
+  const endedRejoin = core.joinRoom(room, { name: "P2", playerId: p2.id, seatToken: p2.seatToken, now: 8700 });
+  assert("ended room allows matching token reconnect", endedRejoin.player.id, p2.id);
   assertThrowsCode("ended room rejects fresh join with room_ended", () => core.joinRoom(room, { name: "Late", now: 8800, random }), "room_ended");
+
+  const beforeDeck = room.deck.length;
+  const oldHostHand = room.players[0].hand.slice();
+  core.setRematchVote(room, room.hostId, true, { now: 8900, random });
+  assert("one rematch vote keeps room ended", room.phase, "ended");
+  assert("public rematch count tracks one vote", core.publicRoom(room, room.hostId).rematchAgreedCount, 1);
+  core.setRematchVote(room, p2.id, true, { now: 9000, random });
+  assert("all rematch votes start next round", room.phase, "playing");
+  assert("rematch increments round", room.round, 2);
+  assert("rematch consumes remaining deck only", room.deck.length, beforeDeck - 6);
+  assert("rematch replaces old host hand", JSON.stringify(room.players[0].hand) === JSON.stringify(oldHostHand), false);
+}
+
+section("rematch rejects when remaining deck cannot redeal everyone");
+{
+  const random = fixedRandom();
+  const room = core.createRoom({ roomCode: "SHORT1", name: "Host", difficulty: "easy", maxPlayers: 2, now: 9100, random });
+  const p2 = core.joinRoom(room, { name: "P2", now: 9200, random }).player;
+  core.setReady(room, p2.id, true, 9300);
+  core.startGame(room, room.hostId, { now: 9400, random });
+  room.players[0].hand = [10, 10, 1];
+  core.submitFormula(room, room.hostId, "10+10+A", 9500);
+  room.deck = [1, 2, 3, 4, 5];
+  assertThrowsCode("short deck rejects rematch vote", () => core.setRematchVote(room, room.hostId, true, { now: 9600, random }), "deck_not_enough");
+  assert("short deck room remains ended", room.phase, "ended");
 }
 
 console.log(`\n${"=".repeat(60)}`);

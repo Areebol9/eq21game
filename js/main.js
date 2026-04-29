@@ -1,6 +1,8 @@
 "use strict";
 // ==================== 初始化入口 ====================
 function init() {
+  if (typeof initSvgIcons === 'function') initSvgIcons(document);
+
   // 初始化牌库计数
   updateDeckCount();
 
@@ -51,7 +53,7 @@ function init() {
   document.getElementById('btn-online-back').onclick = closeOnlineSetup;
 
   // 结果弹窗
-  document.getElementById('btn-again').onclick = resetGame;
+  document.getElementById('btn-again').onclick = handleAgainGame;
   document.getElementById('btn-menu').onclick = goToMenu;
 
   // 音效开关

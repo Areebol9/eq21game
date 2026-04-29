@@ -34,7 +34,12 @@ const game = {
     isHost: false,
     maxPlayers: 4,
     status: '',
-    lastSnapshotAt: 0
+    lastSnapshotAt: 0,
+    round: 1,
+    rematchVotes: {},
+    rematchAgreedCount: 0,
+    rematchNeededCount: 0,
+    canRematch: false
   }
 };
 
@@ -209,7 +214,8 @@ function toggleSound() {
 function updateSoundButton() {
   const btn = document.getElementById('btn-sound');
   if (btn) {
-    btn.innerHTML = '<span class="btn-icon">' + (game.soundEnabled ? '🔊' : '🔇') + '</span>';
+    const icon = game.soundEnabled ? 'volume' : 'volumeOff';
+    btn.innerHTML = '<span class="btn-icon">' + (typeof svgIcon === 'function' ? svgIcon(icon) : (game.soundEnabled ? '音' : '静')) + '</span>';
     btn.title = game.soundEnabled ? '关闭音效' : '开启音效';
     btn.setAttribute('aria-label', btn.title);
   }

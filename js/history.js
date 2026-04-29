@@ -275,13 +275,13 @@ function renderHistoryPanel() {
 
   // 连胜显示
   const streakEl = document.getElementById('history-streak');
-  if (streakEl) streakEl.textContent = '连胜🔥: ' + currentStreak;
+  if (streakEl) streakEl.textContent = '连胜: ' + currentStreak;
 
   // 最漂亮解法
   const bestEl = document.getElementById('history-best');
   if (bestEl && best) {
     const bestTags = best.tags || [];
-    var bestHtml = '<div class="best-title">🏆 最漂亮解法</div>';
+    var bestHtml = '<div class="best-title">' + (typeof svgIcon === 'function' ? svgIcon('trophy', 'best-title-icon') : '') + ' 最漂亮解法</div>';
     bestHtml += '<div class="best-name">' + hEscape(best.player) + '</div>';
     bestHtml += '<div class="best-score">' + best.score + '分</div>';
     bestHtml += '<div class="best-time">' + formatHistoryTime(best.timeSec) + '</div>';
@@ -307,7 +307,7 @@ function renderHistoryPanel() {
     }
     bestEl.innerHTML = bestHtml;
   } else if (bestEl) {
-    bestEl.innerHTML = '<div class="best-title">🏆 最漂亮解法</div><div class="history-empty">暂无竞技记录</div>';
+    bestEl.innerHTML = '<div class="best-title">' + (typeof svgIcon === 'function' ? svgIcon('trophy', 'best-title-icon') : '') + ' 最漂亮解法</div><div class="history-empty">暂无竞技记录</div>';
   }
 
   // 难度筛选

@@ -170,8 +170,21 @@ section("4-client protocol completes one game with one winner");
   h.action(p2, "draw_card");
   const error = p2.messages[p2.messages.length - 1];
   assert("actions after game end return protocol error", error.type, "error");
-  assertThrowsCode("ended room rejects token reconnect", () => h.connect("P2 late", { playerId: p2.playerId, seatToken: p2.seatToken }), "room_ended");
+  const p2Late = h.connect("P2 late", { playerId: p2.playerId, seatToken: p2.seatToken });
+  assert("ended room allows token reconnect", p2Late.playerId, p2.playerId);
   assertThrowsCode("ended room rejects fresh join", () => h.connect("Late"), "room_ended");
+
+  const beforeRematchDeck = h.room.deck.length;
+  h.action(host, "rematch_vote", { agreed: true });
+  assert("one rematch vote keeps ended phase", h.room.phase, "ended");
+  assert("snapshots show one rematch vote", h.latest(p4).rematchAgreedCount, 1);
+  h.action(p2Late, "rematch_vote", { agreed: true });
+  h.action(p3, "rematch_vote", { agreed: true });
+  h.action(p4, "rematch_vote", { agreed: true });
+  assert("all rematch votes start new round", h.room.phase, "playing");
+  assert("rematch increments public round", h.latest(host).round, 2);
+  assert("rematch consumes remaining deck", h.room.deck.length, beforeRematchDeck - 12);
+  assert("all clients see rematch playing", h.clients.every(c => h.latest(c).phase === "playing"), true);
 }
 
 section("heartbeat, quick chat, and reconnect snapshots");
