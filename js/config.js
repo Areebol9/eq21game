@@ -119,9 +119,20 @@ function updateTimerUI() { const m = Math.floor(game.timerSec / 60), s = game.ti
 function updateDeckCount() { document.getElementById('deck-count').textContent = game.deck.length; }
 
 // ==================== 卡片显示 ====================
-const SUITS = ['\u2660','\u2665','\u2663','\u2666'];
+const SUITS = ['spade','heart','club','diamond'];
 function getSuit(v) { return SUITS[(v - 1) % 4]; }
-function isRedSuit(v) { const s = getSuit(v); return s === '\u2665' || s === '\u2666'; }
+function isRedSuit(v) { const s = getSuit(v); return s === 'heart' || s === 'diamond'; }
+
+function suitSvgHTML(suitName) {
+  const paths = {
+    spade: 'M12 2.4C8.1 6.5 4.7 9.2 4.7 12.8c0 2.45 1.82 4.25 4.12 4.25 1.23 0 2.25-.5 2.88-1.32-.26 1.8-1.1 3.23-2.52 4.42h5.64c-1.42-1.19-2.26-2.62-2.52-4.42.63.82 1.65 1.32 2.88 1.32 2.3 0 4.12-1.8 4.12-4.25 0-3.6-3.4-6.3-7.3-10.4Z',
+    heart: 'M12 20.5C7.35 16.35 4.1 13.45 4.1 9.75A4.05 4.05 0 0 1 8.2 5.6c1.78 0 3.05.92 3.8 2.02.75-1.1 2.02-2.02 3.8-2.02a4.05 4.05 0 0 1 4.1 4.15c0 3.7-3.25 6.6-7.9 10.75Z',
+    diamond: 'M12 2.6 19.35 12 12 21.4 4.65 12 12 2.6Z',
+    club: 'M12 2.912 12 2.9C9.6 2.9 7.6 4.9 7.6 7.3 7.6 8.2 7.8 9 8.2 9.6 7.6 9.4 7 9.2 6.2 9.2 3.8 9.2 1.8 11.2 1.8 13.7 1.8 16.1 3.8 18.1 6.2 18.1 8.3 18.1 10 16.7 10.5 14.8 10.4 17.4 9.4 19.8 7.4 21.8H16.6C14.6 19.8 13.6 17.4 13.5 14.8 14 16.7 15.7 18.1 17.8 18.1 20.2 18.1 22.2 16.1 22.2 13.7 22.2 11.2 20.2 9.2 17.8 9.2 17 9.2 16.4 9.4 15.8 9.6 16.2 9 16.4 8.2 16.4 7.3 16.4 4.9 14.4 2.9 12 2.9Z'
+  };
+  const d = paths[suitName] || paths.spade;
+  return '<svg class="suit-icon" viewBox="0 0 24 24" width="1em" height="1em"><path fill="currentColor" d="' + d + '"/></svg>';
+}
 function cardFace(v) { if (v === 1) return 'A'; if (v === 11) return 'J'; if (v === 12) return 'Q'; if (v === 13) return 'K'; return String(v); }
 function formatNum(n) { if (typeof n !== 'number' || !isFinite(n)) return String(n); return Number.isInteger(n) ? n.toString() : n.toFixed(6).replace(/0+$/, '').replace(/\.$/, ''); }
 

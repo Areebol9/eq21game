@@ -157,9 +157,11 @@
   line-height:1;font-size:.7em;font-weight:800}
 .card-front .corner.top-left{top:3px;left:4px}
 .card-front .corner.bottom-right{bottom:3px;right:4px;transform:rotate(180deg)}
-.card-front .center-suit{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.4em}
+.card-front .center-suit{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.15em}
 .suit-color-red{color:#c0392b}
 .suit-color-black{color:#1a1a2e}
+.suit-icon{display:inline-block;width:1em;height:1em;vertical-align:top}
+.card-front .corner .suit-wrap{display:flex;align-items:center;justify-content:center}
 
 /* 牌背 */
 .card-back{transform:rotateY(0deg);
@@ -399,7 +401,7 @@
 .home-table-cues .cue-corner.tl{top:2px;left:3px;}
 .home-table-cues .cue-corner.br{bottom:2px;right:3px;transform:rotate(180deg);}
 .home-table-cues .cue-corner b{font-size:8px;font-weight:800;opacity:.65;}
-.home-table-cues .cue-corner i{font-size:5px;font-style:normal;opacity:.55;}
+.home-table-cues .cue-corner .suit-icon{width:6px;height:6px;opacity:.55;}
 .home-table-cues .suit-red{color:#c0392b}
 .home-table-cues .suit-black{color:#1a1a2e}
 
@@ -687,7 +689,7 @@
   #main-container{padding:8px;gap:8px}
   .card-shell{width:clamp(36px,11vw,52px);height:clamp(52px,15.5vw,74px)}
   .card-front .corner{font-size:.6em}
-  .card-front .center-suit{font-size:1.1em}
+  .card-front .center-suit{font-size:.85em}
   .player-actions input{font-size:.85em}
   .menu-grid{grid-template-columns:repeat(2,1fr);gap:6px}
   .menu-card{padding:14px 8px;min-height:124px}
@@ -900,6 +902,7 @@
   #main-container{grid-template-columns:1fr 340px}
   .player-card{flex:0 1 420px;max-width:500px}
   .card-shell{width:60px;height:86px}
+  .card-front .center-suit{font-size:1.05em}
 }
 
 /* ========== 音效 & 历史按钮 ========== */

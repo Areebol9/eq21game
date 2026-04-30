@@ -44,11 +44,16 @@ function updateTimerUI() { const m=Math.floor(game.timerSec/60),s=game.timerSec%
 function updateDeckCount() { document.getElementById('deck-count').textContent=game.deck.length }
 
 // ==================== 卡片显示 ====================
-const SUITS = ['\u2660','\u2665','\u2663','\u2666'];
+const SUITS = ['spade','heart','club','diamond'];
 function getSuit(v) { return SUITS[(v-1)%4] }
-function isRedSuit(v) { const s=getSuit(v);return s==='\u2665'||s==='\u2666' }
+function isRedSuit(v) { const s=getSuit(v);return s==='heart'||s==='diamond' }
 function cardFace(v) { if(v===1)return'A';if(v===11)return'J';if(v===12)return'Q';if(v===13)return'K';return String(v) }
 function formatNum(n){ if(typeof n!=='number'||!isFinite(n)) return String(n); return Number.isInteger(n)?n.toString():n.toFixed(6).replace(/0+$/,'').replace(/\.$/,'') }
+function suitSvgHTML(suitName){
+  var paths={spade:'M12 2.4C8.1 6.5 4.7 9.2 4.7 12.8c0 2.45 1.82 4.25 4.12 4.25 1.23 0 2.25-.5 2.88-1.32-.26 1.8-1.1 3.23-2.52 4.42h5.64c-1.42-1.19-2.26-2.62-2.52-4.42.63.82 1.65 1.32 2.88 1.32 2.3 0 4.12-1.8 4.12-4.25 0-3.6-3.4-6.3-7.3-10.4Z',heart:'M12 20.5C7.35 16.35 4.1 13.45 4.1 9.75A4.05 4.05 0 0 1 8.2 5.6c1.78 0 3.05.92 3.8 2.02.75-1.1 2.02-2.02 3.8-2.02a4.05 4.05 0 0 1 4.1 4.15c0 3.7-3.25 6.6-7.9 10.75Z',diamond:'M12 2.6 19.35 12 12 21.4 4.65 12 12 2.6Z',club:'M12 2.9C9.6 2.9 7.6 4.9 7.6 7.3C7.6 8.2 7.8 9 8.2 9.6C7.6 9.4 7 9.2 6.2 9.2C3.8 9.2 1.8 11.2 1.8 13.7C1.8 16.1 3.8 18.1 6.2 18.1C8.3 18.1 10 16.7 10.5 14.8C10.4 17.4 9.4 19.8 7.4 21.8H16.6C14.6 19.8 13.6 17.4 13.5 14.8C14 16.7 15.7 18.1 17.8 18.1C20.2 18.1 22.2 16.1 22.2 13.7C22.2 11.2 20.2 9.2 17.8 9.2C17 9.2 16.4 9.4 15.8 9.6C16.2 9 16.4 8.2 16.4 7.3C16.4 4.9 14.4 2.9 12 2.9Z'};
+  var d=paths[suitName]||paths.spade;
+  return '<svg class="suit-icon" viewBox="0 0 24 24" width="1em" height="1em"><path fill="currentColor" d="'+d+'"/></svg>';
+}
 
 // ==================== Web Audio 音效 ====================
 let _audioCtx=null;let _audioCtxPromise=null;
@@ -332,32 +337,32 @@ function addLog(msg,cls){
 let _autoHintTimer=null;
 function updateFooterBar(){
   const fb=document.getElementById('footer-bar');
-  if(game.phase==='menu'){fb.innerHTML='<span class="icon">♠</span> 选择游戏模式开始吧！';return}
-  if(game.phase==='ended'){fb.innerHTML='<span class="icon">♠</span> 游戏结束！';return}
+  if(game.phase==='menu'){fb.innerHTML=''+suitSvgHTML('spade')+' 选择游戏模式开始吧！';return}
+  if(game.phase==='ended'){fb.innerHTML=''+suitSvgHTML('spade')+' 游戏结束！';return}
   const isSolo=game.mode==='solo';
   const isAi=game.mode==='ai';
   if(isSolo){
     const p=game.players[0];
-    if(!p||p.conceded){fb.innerHTML='<span class="icon">♠</span> 你已认输';return}
+    if(!p||p.conceded){fb.innerHTML=''+suitSvgHTML('spade')+' 你已认输';return}
     if(game.aiThinking){
-      fb.innerHTML='<span class="icon">♠</span> AI思考中...剩余'+game.aiCountdown+'s';
+      fb.innerHTML=''+suitSvgHTML('spade')+' AI思考中...剩余'+game.aiCountdown+'s';
     }else{
-      fb.innerHTML='<span class="icon">♠</span> 手牌'+p.hand.length+'张 | 输入算式后提交 | 💡提示剩余'+(game.stats?game.stats.maxHints-game.stats.hintsUsed:0)+'次';
+      fb.innerHTML=''+suitSvgHTML('spade')+' 手牌'+p.hand.length+'张 | 输入算式后提交 | 💡提示剩余'+(game.stats?game.stats.maxHints-game.stats.hintsUsed:0)+'次';
     }
   }else if(isAi){
     const human=game.players[0];
     const ai=game.players[1];
-    if(human&&human.conceded){fb.innerHTML='<span class="icon">♠</span> 你已认输';return}
+    if(human&&human.conceded){fb.innerHTML=''+suitSvgHTML('spade')+' 你已认输';return}
     if(game.aiThinking){
-      fb.innerHTML='<span class="icon">♠</span> 🤖 对手在思考...'+game.aiCountdown+'s';
+      fb.innerHTML=''+suitSvgHTML('spade')+' 🤖 对手在思考...'+game.aiCountdown+'s';
     }else if(game.aiSolved){
-      fb.innerHTML='<span class="icon">♠</span> 🤖 对手似乎已经找到答案！';
+      fb.innerHTML=''+suitSvgHTML('spade')+' 🤖 对手似乎已经找到答案！';
     }else{
-      fb.innerHTML='<span class="icon">♠</span> 快！尽快算出'+game.target+'！ | 你的手牌'+human.hand.length+'张';
+      fb.innerHTML=''+suitSvgHTML('spade')+' 快！尽快算出'+game.target+'！ | 你的手牌'+human.hand.length+'张';
     }
   }else{
     const activeCnt=game.players.filter(p=>!p.conceded).length;
-    fb.innerHTML='<span class="icon">♠</span> '+activeCnt+'位玩家在比赛中...';
+    fb.innerHTML=''+suitSvgHTML('spade')+' '+activeCnt+'位玩家在比赛中...';
   }
 }
 
@@ -421,10 +426,11 @@ function renderCardHTML(value,extraClass){
   const face=cardFace(value),suit=getSuit(value),red=isRedSuit(value);
   const cls=red?'suit-color-red':'suit-color-black';
   const ec=extraClass?' '+extraClass:'';
+  const svg=suitSvgHTML(suit);
   return '<div class="card-el'+ec+'">'+
-    '<div class="corner top-left '+cls+'"><span>'+face+'</span><span>'+suit+'</span></div>'+
-    '<div class="center-suit '+cls+'">'+suit+'</div>'+
-    '<div class="corner bottom-right '+cls+'"><span>'+face+'</span><span>'+suit+'</span></div>'+
+    '<div class="corner top-left '+cls+'"><span>'+face+'</span><span class="suit-wrap">'+svg+'</span></div>'+
+    '<div class="center-suit '+cls+'">'+svg+'</div>'+
+    '<div class="corner bottom-right '+cls+'"><span>'+face+'</span><span class="suit-wrap">'+svg+'</span></div>'+
     '</div>';
 }
 
@@ -874,7 +880,7 @@ function goToMenu(){
   updateTimerUI();updateDeckCount();
   document.getElementById('players-area').innerHTML='';
   document.getElementById('log-panel').innerHTML='';
-  document.getElementById('footer-bar').innerHTML='<span class="icon">♠</span> 准备开始游戏...';
+  document.getElementById('footer-bar').innerHTML=''+suitSvgHTML('spade')+' 准备开始游戏...';
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   document.getElementById('menu-overlay').classList.remove('hidden');
@@ -1007,7 +1013,7 @@ function resetGame(){
   document.getElementById('result-overlay').classList.add('hidden');
   document.getElementById('players-area').innerHTML='';
   document.getElementById('log-panel').innerHTML='';
-  document.getElementById('footer-bar').innerHTML='<span class="icon">♠</span> 准备开始游戏...';
+  document.getElementById('footer-bar').innerHTML=''+suitSvgHTML('spade')+' 准备开始游戏...';
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   if(game.mode==='local'){

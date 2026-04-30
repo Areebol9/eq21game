@@ -172,12 +172,13 @@ function renderCardHTML(value, extraClass) {
   const face = cardFace(value), suit = getSuit(value), red = isRedSuit(value);
   const cls = red ? 'suit-color-red' : 'suit-color-black';
   const ec = extraClass ? ' ' + extraClass : '';
+  const svg = suitSvgHTML(suit);
   return '<div class="card-shell' + ec + '">' +
     '<div class="card-inner">' +
       '<div class="card-face card-front">' +
-        '<div class="corner top-left ' + cls + '"><span>' + face + '</span><span>' + suit + '</span></div>' +
-        '<div class="center-suit ' + cls + '">' + suit + '</div>' +
-        '<div class="corner bottom-right ' + cls + '"><span>' + face + '</span><span>' + suit + '</span></div>' +
+        '<div class="corner top-left ' + cls + '"><span>' + face + '</span><span class="suit-wrap">' + svg + '</span></div>' +
+        '<div class="center-suit ' + cls + '">' + svg + '</div>' +
+        '<div class="corner bottom-right ' + cls + '"><span>' + face + '</span><span class="suit-wrap">' + svg + '</span></div>' +
       '</div>' +
       '<div class="card-face card-back"></div>' +
     '</div>' +
