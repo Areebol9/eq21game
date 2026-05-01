@@ -22,8 +22,8 @@
 
 | 项目 | 地址 |
 |------|------|
-| 前端 | `https://equation-21-simple.pages.dev` |
-| 后端 | `https://eq21game.eq21game.workers.dev`（Cloudflare Workers + Durable Objects） |
+| 前端 | 见 Cloudflare Pages 项目面板 |
+| 后端 | 见 Cloudflare Workers 项目面板 |
 | 部署方式 | `npx wrangler deploy` |
 
 ---
@@ -38,7 +38,7 @@
 | 设备 2 | 平板横屏（1024×768 或 iPad） |
 | 设备 3 | 手机竖屏（375×812） |
 | 测试文件 | `index.html` |
-| 线上测试 | `https://equation-21-simple.pages.dev` |
+| 线上测试 | Cloudflare Pages 部署地址 |
 
 ---
 
@@ -246,7 +246,7 @@
 
 ## 十六、联网对战（18 条）
 
-> 线上地址：`https://equation-21-simple.pages.dev` + Worker `eq21game.eq21game.workers.dev`
+> 线上地址：见 Cloudflare Pages + Workers 项目面板
 
 ### 16A — 创建/加入房间 (5)
 

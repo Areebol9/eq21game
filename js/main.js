@@ -1,6 +1,8 @@
 "use strict";
 // ==================== 初始化入口 ====================
 function init() {
+  initLanguage();
+
   if (typeof initSvgIcons === 'function') initSvgIcons(document);
 
   // 初始化牌库计数
@@ -13,6 +15,14 @@ function init() {
   document.getElementById('btn-online').onclick = () => startMode('online');
   document.getElementById('btn-rules').onclick = showRules;
   document.getElementById('btn-back').onclick = goToMenu;
+
+  // 语言切换
+  var langBtn = document.getElementById('btn-lang');
+  if (langBtn) {
+    langBtn.onclick = function() {
+      setLanguage(I18N.lang === 'zh' ? 'en' : 'zh');
+    };
+  }
 
   // 规则弹窗关闭
   document.getElementById('btn-close-rules').onclick = hideRules;

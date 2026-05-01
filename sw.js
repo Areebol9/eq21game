@@ -1,8 +1,9 @@
-const CACHE = 'equation21-v25';
+const CACHE = 'equation21-v28';
 const FILES = [
   './index.html',
   './style.css',
   './manifest.json',
+  './js/i18n.js',
   './js/config.js',
   './js/expression.js',
   './js/solver-worker.js',

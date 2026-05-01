@@ -30,6 +30,7 @@ equation-21-simple/
 │   └── room-core.cjs       # 联网房间规则核心（可直接 Node 测试）
 └── js/
     ├── config.js           # 全局状态 & 运算符注册表 & 音效
+    ├── icons.js            # SVG 图标注册 & 渲染（模式/花色/UI图标）
     ├── expression.js       # 表达式求值器 & AI求解器 & 妙解评分
     ├── solver-worker.js    # Web Worker 求解器（由 game.js 动态创建，非 <script> 加载）
     ├── history.js          # 历史记录 & 评分系统
@@ -85,7 +86,7 @@ equation-21-simple/
 
 ---
 
-### `js/expression.js` — 表达式引擎 & AI求解器 & 妙解评分（加载第 2 个）
+### `js/expression.js` — 表达式引擎 & AI求解器 & 妙解评分（加载第 3 个）
 
 | 函数 | 职责 |
 |------|------|
@@ -104,7 +105,7 @@ equation-21-simple/
 
 ---
 
-### `js/ui.js` — UI渲染（加载第 4 个）
+### `js/ui.js` — UI渲染（加载第 5 个）
 
 | 函数 | 职责 |
 |------|------|
@@ -142,7 +143,18 @@ equation-21-simple/
 
 ---
 
-### `js/game.js` — 游戏逻辑引擎（加载第 5 个）
+### `js/icons.js` — SVG 图标系统
+
+| 内容 | 说明 |
+|------|------|
+| `EQ21_ICON_PATHS` | 图标 SVG path 注册表（~30 个图标，含模式/花色/UI图标） |
+| `svgIcon()` | 生成完整 SVG 标签，自动检测 `<defs>` 完整渲染 |
+| `setSvgIcon()` | 将 SVG 注入 DOM 元素 |
+| `initSvgIcons()` | 扫描 `[data-icon]` 属性并批量渲染 |
+
+> **注意**：4 个模式图标（single/table/ai/online）使用完整多层 SVG defs 渲染（渐变+高光+描边），与花色图标（suitSpade等）独立定义互不影响。**什么情况改这里**：新增/修改图标、调整模式图标3D效果。
+
+### `js/game.js` — 游戏逻辑引擎（加载第 7 个）
 
 | 函数 | 职责 |
 |------|------|
@@ -162,7 +174,7 @@ equation-21-simple/
 
 ---
 
-### `js/online.js` — 联网客户端
+### `js/online.js` — 联网客户端（加载第 6 个）
 
 | 函数 | 职责 |
 |------|------|
@@ -199,7 +211,7 @@ equation-21-simple/
 
 ---
 
-### `js/main.js` — 入口初始化 & 事件绑定（加载第 6 个）
+### `js/main.js` — 入口初始化 & 事件绑定（加载第 8 个）
 
 | 内容 | 说明 |
 |------|------|
@@ -216,12 +228,13 @@ equation-21-simple/
 
 ```html
 <script src="js/config.js"></script>      <!-- 1. 零依赖 -->
-<script src="js/expression.js"></script>   <!-- 2. → config.js -->
-<script src="js/history.js"></script>      <!-- 3. → config.js -->
-<script src="js/ui.js"></script>           <!-- 4. → config.js + expression.js -->
-<script src="js/online.js"></script>       <!-- 5. → config.js + ui.js + history.js -->
-<script src="js/game.js"></script>         <!-- 6. → config.js + expression.js + ui.js + history.js -->
-<script src="js/main.js"></script>         <!-- 7. → 所有以上文件 -->
+<script src="js/icons.js"></script>       <!-- 2. 零依赖 -->
+<script src="js/expression.js"></script>   <!-- 3. → config.js -->
+<script src="js/history.js"></script>      <!-- 4. → config.js -->
+<script src="js/ui.js"></script>           <!-- 5. → config.js + icons.js + expression.js -->
+<script src="js/online.js"></script>       <!-- 6. → config.js + ui.js + history.js -->
+<script src="js/game.js"></script>         <!-- 7. → config.js + expression.js + ui.js + history.js -->
+<script src="js/main.js"></script>         <!-- 8. → 所有以上文件 -->
 ```
 
 每个文件只依赖排在前面的文件，无循环依赖。

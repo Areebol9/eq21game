@@ -27,3 +27,6 @@ temp/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Kilo development plans
+.kilo/

@@ -706,16 +706,16 @@ function goToMenu() {
 function startMode(mode) {
   document.getElementById('menu-overlay').classList.add('hidden');
   if (mode === 'solo') {
-    State.set('mode', 'solo'); updateModeBadge('单人练习'); startSoloGame();
+    State.set('mode', 'solo'); updateModeBadge(t('mode_solo')); startSoloGame();
   } else if (mode === 'local') {
-    State.set('mode', 'local'); updateModeBadge('围桌模式');
+    State.set('mode', 'local'); updateModeBadge(t('mode_local'));
     document.getElementById('table-setup-overlay').classList.remove('hidden');
     resetTableSetupDefaults();
   } else if (mode === 'ai') {
-    State.set('mode', 'ai'); updateModeBadge('AI对战');
+    State.set('mode', 'ai'); updateModeBadge(t('mode_ai'));
     document.getElementById('ai-setup-overlay').classList.remove('hidden');
   } else if (mode === 'online') {
-    State.set('mode', 'online'); updateModeBadge('联网对战');
+    State.set('mode', 'online'); updateModeBadge(t('mode_online'));
     if (typeof openOnlineSetup === 'function') openOnlineSetup();
   }
 }
@@ -798,7 +798,7 @@ function updateResultAgainButton() {
   const status = document.getElementById('result-rematch-status');
   if (!btn) return;
   btn.disabled = false;
-  btn.textContent = '再来一局';
+  btn.textContent = t('btn_again');
   if (status) {
     status.textContent = '';
     status.className = '';
