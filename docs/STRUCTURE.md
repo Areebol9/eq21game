@@ -25,6 +25,13 @@ equation-21-simple/
 │   ├── test-solver-perf.js # 性能回归测试（默认 138 样本，支持 --stress）
 │   ├── _bench_6332J.js     # 6332J 手牌微基准测试
 │   └── BUG_REPORT.md       # Bug 修复记录
+├── docs/
+│   ├── assets/             # 截图等资源文件
+│   ├── ARCHITECTURE.md     # 架构分析
+│   ├── GAME_RULES.md       # 游戏规则
+│   ├── ROADMAP.md          # 开发路线图
+│   ├── STRUCTURE.md        # 项目结构说明
+│   └── TEST_PLAN.md        # 手工测试清单
 ├── worker/
 │   ├── index.js            # Cloudflare Worker + Durable Object 入口
 │   └── room-core.cjs       # 联网房间规则核心（可直接 Node 测试）

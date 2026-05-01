@@ -742,18 +742,18 @@ function updateTableNameInputs() {
   container.innerHTML = '';
 
   const seatLabels = {
-    2: ['主位', '对家'],
-    3: ['主位', '左席', '右席'],
-    4: ['主位', '左席', '对家', '右席']
+    2: [t('seat_host'), t('seat_opposite')],
+    3: [t('seat_host'), t('seat_left'), t('seat_right')],
+    4: [t('seat_host'), t('seat_left'), t('seat_opposite'), t('seat_right')]
   };
   const labels = seatLabels[count] || [];
 
   for (let i = 0; i < count; i++) {
     const r = document.createElement('div');
     r.className = 'row';
-    const label = labels[i] || ('玩家' + (i + 1));
-    r.innerHTML = '<label>玩家' + (i + 1) + '（' + label + '）</label>' +
-      '<input type="text" id="pname-' + i + '" value="玩家' + (i + 1) + '" maxlength="6">';
+    const label = labels[i] || t('default_player', {N: i + 1});
+    r.innerHTML = '<label>' + t('default_player', {N: i + 1}) + '（' + label + '）</label>' +
+      '<input type="text" id="pname-' + i + '" value="' + t('default_player', {N: i + 1}) + '" maxlength="6">';
     container.appendChild(r);
   }
 }
@@ -809,7 +809,7 @@ function updateResultAgainButton() {
     if (!canStartLocalRematch()) {
       btn.disabled = true;
       if (status) {
-        status.textContent = '牌库不足：需要 ' + needed + ' 张，当前剩余 ' + game.deck.length + ' 张。请返回菜单重新开局。';
+        status.textContent = t('result_card_shortage', {need: needed, remain: game.deck.length});
         status.className = 'result-rematch-status warn';
       }
     } else if (status) {
@@ -890,7 +890,7 @@ function startLocalGame() {
   const names = [];
   for (let i = 0; i < count; i++) {
     const inp = document.getElementById('pname-' + i);
-    names.push((inp && inp.value.trim()) ? inp.value.trim() : ('玩家' + (i + 1)));
+    names.push((inp && inp.value.trim()) ? inp.value.trim() : t('default_player', {N: i + 1}));
   }
   initPlayers(names, Array(count).fill(false));
   dealCards();
@@ -942,11 +942,11 @@ function showResult(winnerIdx) {
     const p = game.players[winnerIdx];
     if (typeof setSvgIcon === 'function') setSvgIcon(icon, 'trophy');
     else icon.textContent = '胜';
-    title.textContent = p.name + ' 获胜！';
-    var detailText = '用时 ' + formatTime(game.timerSec) + '，手牌 ' + p.hand.length + ' 张';
+    title.textContent = t('result_win', {name: p.name});
+    var detailText = t('result_detail', {time: formatTime(game.timerSec), N: p.hand.length});
 
     if (game.currentScore > 0) {
-      detailText += ' | ⭐' + game.currentScore + '分';
+      detailText += ' | ' + t('result_score', {N: game.currentScore});
       // 分数明细
       if (scoreEl && game.scoreBreakdown.length > 0) {
         var bdHtml = '';
@@ -991,8 +991,8 @@ function showResult(winnerIdx) {
   } else {
     if (typeof setSvgIcon === 'function') setSvgIcon(icon, 'handshake');
     else icon.textContent = '平';
-    title.textContent = '本局无胜者';
-    detail.textContent = '经过 ' + formatTime(game.timerSec) + ' 的比拼，无人算出' + game.target;
+    title.textContent = t('result_draw');
+    detail.textContent = t('result_draw_detail', {time: formatTime(game.timerSec), target: game.target});
     var drawFormula = document.getElementById('result-formula');
     if (drawFormula) drawFormula.classList.add('hidden');
   }
@@ -1031,5 +1031,5 @@ function resetGame() {
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60), s = sec % 60;
-  return String(m).padStart(2, '0') + '分' + String(s).padStart(2, '0') + '秒';
+  return t('time_min', {N: String(m).padStart(2, '0')}) + t('time_sec', {N: String(s).padStart(2, '0')});
 }

@@ -1,14 +1,20 @@
 # Equation 21 — 算式21点
 
-用数学算式对决的网页卡牌游戏。自研表达式引擎 + AI 求解器 + 联网房间。
+一款用扑克牌数字凑出 21 的网页卡牌游戏。玩家需要组合运算符与括号，写出结果等于 21 的算式。
+内置表达式解析器、AI 求解器、PWA 离线支持与联网房间。
 
-*A math card game where players form equations to reach 21. Custom expression engine, AI solver, and online rooms.*
+* AA browser-based math card game where players use card values and operators to build equations that equal 21.*
+*Includes a custom expression engine, AI solver, PWA support, and online rooms.*
 
 **[在线试玩 / Play](https://eq21game.com)**
 
 | 单人练习 | 围桌模式 | AI 对战 | 联网对战 |
 |:---:|:---:|:---:|:---:|
 | 自由练习 · 渐进提示 | 2~4 人同设备 | 三级难度 AI | 开房邀请 · 在线对决 |
+
+<p align="center">
+  <img src="docs/assets/main-menu.png" alt="Equation 21 main menu" width="860">
+</p>
 
 ## 技术栈
 

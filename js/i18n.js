@@ -90,7 +90,50 @@ var I18N = {
       rules_important_3: "除法结果可以是小数",
       rules_important_4: "每局最多<strong>5张牌</strong>，可主动点击\"+牌\"追加",
       rules_important_5: "花色不影响游戏（仅装饰）",
-      rules_important_6: "提交不正确可重试，无次数限制"
+      rules_important_6: "提交不正确可重试，无次数限制",
+
+      btn_submit: "提交",
+      btn_draw: "+牌",
+      btn_hint: "提示",
+      btn_cool_hint: "妙解",
+      btn_give_up: "认输",
+      btn_back_menu: "返回菜单",
+
+      hand_count: "手牌{N}张",
+      status_win: "获胜",
+      status_lost: "认输",
+      status_thinking: "思考中... {N}s",
+      card_tooltip: "点击插入 {N}",
+      hand_public: "{name} 的公开手牌",
+
+      confirm_give_up: "确定要认输吗？",
+
+      result_win: "{name} 获胜！",
+      result_detail: "用时 {time}，手牌 {N} 张",
+      result_score: "⭐{N}分",
+      result_draw: "本局无胜者",
+      result_draw_detail: "经过 {time} 的比拼，无人算出{target}",
+      result_card_shortage: "牌库不足：需要 {need} 张，当前剩余 {remain} 张。请返回菜单重新开局。",
+
+      chat_got_it: "算出来了",
+      chat_close: "就差一点",
+      chat_go: "加油",
+      chat_nice: "漂亮",
+      chat_gg: "GG",
+      chat_ready: "准备好了",
+      chat_hello: "大家好",
+      chat_wait: "再等等",
+      chat_start: "快开始",
+      chat_again: "再来",
+
+      time_min: "{N}分",
+      time_sec: "{N}秒",
+
+      seat_host: "主位",
+      seat_opposite: "对家",
+      seat_left: "左席",
+      seat_right: "右席",
+      default_player: "玩家{N}"
     },
     en: {
       lang_toggle: "中文",
@@ -179,13 +222,64 @@ var I18N = {
       rules_important_3: "Division may produce decimal results",
       rules_important_4: "Max <strong>5 cards</strong> per round, click \"+Card\" to draw",
       rules_important_5: "Card suits are decorative only",
-      rules_important_6: "Retry unlimited times if incorrect"
+      rules_important_6: "Retry unlimited times if incorrect",
+
+      btn_submit: "Submit",
+      btn_draw: "+Card",
+      btn_hint: "Hint",
+      btn_cool_hint: "Genius",
+      btn_give_up: "Give Up",
+      btn_back_menu: "Back",
+
+      hand_count: "{N} cards",
+      status_win: "Won",
+      status_lost: "Lost",
+      status_thinking: "Thinking... {N}s",
+      card_tooltip: "Click: add {N}",
+      hand_public: "{name} hand",
+
+      confirm_give_up: "Sure you want to give up?",
+
+      result_win: "{name} Wins!",
+      result_detail: "{time}, {N} cards",
+      result_score: "\u2b50{N} pts",
+      result_draw: "Draw \u2014 No Winner",
+      result_draw_detail: "After {time}, no one solved {target}",
+      result_card_shortage: "Not enough cards: need {need}, {remain} left. Return to menu.",
+
+      chat_got_it: "Got it!",
+      chat_close: "So close",
+      chat_go: "Go go!",
+      chat_nice: "Nice!",
+      chat_gg: "GG",
+      chat_ready: "Ready",
+      chat_hello: "Hello",
+      chat_wait: "Wait",
+      chat_start: "Start!",
+      chat_again: "Again",
+
+      time_min: "{N}m",
+      time_sec: "{N}s",
+
+      seat_host: "Host",
+      seat_opposite: "Opposite",
+      seat_left: "Left",
+      seat_right: "Right",
+      default_player: "Player{N}"
     }
   }
 };
 
-function t(key) {
-  return I18N.text[I18N.lang][key] || key;
+function t(key, params) {
+  var text = I18N.text[I18N.lang][key] || key;
+  if (params) {
+    for (var k in params) {
+      if (params.hasOwnProperty(k)) {
+        text = text.replace(new RegExp("\\{" + k + "\\}", "g"), params[k]);
+      }
+    }
+  }
+  return text;
 }
 
 function setLanguage(lang) {

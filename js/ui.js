@@ -218,14 +218,14 @@ function renderAll() {
 
     const st = document.createElement('span'); st.className = 'player-status';
     if (p.isAi && game.aiThinking && game.phase === 'playing' && !p.conceded) {
-      st.innerHTML = uiIcon('ai', 'status-inline-icon') + ' 思考中... ' + game.aiCountdown + 's';
+      st.innerHTML = uiIcon('ai', 'status-inline-icon') + ' ' + t('status_thinking', {N: game.aiCountdown});
       st.className += ' thinking';
     } else if (game.phase === 'ended' && p.feedbackType === 'ok') {
-      st.innerHTML = uiIcon('trophy', 'status-inline-icon') + ' 获胜'; st.className += ' won';
+      st.innerHTML = uiIcon('trophy', 'status-inline-icon') + ' ' + t('status_win'); st.className += ' won';
     } else if (p.conceded) {
-      st.textContent = '认输'; st.className += ' lost';
+      st.textContent = t('status_lost'); st.className += ' lost';
     } else {
-      st.textContent = '手牌' + p.hand.length + '张';
+      st.textContent = t('hand_count', {N: p.hand.length});
     }
     hdr.appendChild(st); card.appendChild(hdr);
 
@@ -246,7 +246,7 @@ function renderAll() {
 
         if (!(isAi && p.isAi)) {
           el.style.cursor = 'pointer';
-          el.title = '点击插入 ' + cardFace(v);
+          el.title = t('card_tooltip', {N: cardFace(v)});
           el.onclick = () => {
             soundPlay('click');
             const inp = card.querySelector('.formula-input');
@@ -296,27 +296,27 @@ function renderAll() {
     act.appendChild(input);
 
     const btnSub = document.createElement('button');
-    btnSub.className = 'btn-submit'; btnSub.textContent = '提交';
+    btnSub.className = 'btn-submit'; btnSub.textContent = t('btn_submit');
     btnSub.disabled = (game.phase !== 'playing' || p.conceded || (isAi && p.isAi));
     btnSub.onclick = () => submitFormula(i);
     act.appendChild(btnSub);
 
     const btnDraw = document.createElement('button');
-    btnDraw.className = 'btn-draw'; btnDraw.textContent = '+牌';
+    btnDraw.className = 'btn-draw'; btnDraw.textContent = t('btn_draw');
     btnDraw.disabled = (game.phase !== 'playing' || p.conceded || p.hand.length >= game.maxCards || (isAi && p.isAi));
     btnDraw.onclick = () => drawForPlayer(i);
     act.appendChild(btnDraw);
 
     if (isSolo) {
       const btnHint = document.createElement('button');
-      btnHint.className = 'btn-hint'; btnHint.innerHTML = uiIcon('rules', 'btn-inline-icon') + '提示(' + (game.stats.maxHints - game.stats.hintsUsed) + ')';
+      btnHint.className = 'btn-hint'; btnHint.innerHTML = uiIcon('rules', 'btn-inline-icon') + t('btn_hint') + '(' + (game.stats.maxHints - game.stats.hintsUsed) + ')';
       btnHint.disabled = (game.phase !== 'playing' || game.stats.hintsUsed >= game.stats.maxHints || game.aiThinking);
       btnHint.onclick = () => showHint();
       act.appendChild(btnHint);
       if (game.difficulty !== 'easy') {
         const btnCool = document.createElement('button');
         btnCool.className = 'btn-hint btn-cool';
-        btnCool.innerHTML = uiIcon('sparkle', 'btn-inline-icon') + '妙解';
+        btnCool.innerHTML = uiIcon('sparkle', 'btn-inline-icon') + t('btn_cool_hint');
         btnCool.disabled = (game.phase !== 'playing' || game.aiThinking);
         btnCool.onclick = () => showCoolHint();
         act.appendChild(btnCool);
@@ -324,7 +324,7 @@ function renderAll() {
     }
 
     const btnConc = document.createElement('button');
-    btnConc.className = 'btn-concede'; btnConc.textContent = '认输';
+    btnConc.className = 'btn-concede'; btnConc.textContent = t('btn_give_up');
     btnConc.disabled = (game.phase !== 'playing' || p.conceded || (isAi && p.isAi));
     btnConc.onclick = () => concedePlayer(i);
     act.appendChild(btnConc);
@@ -449,9 +449,9 @@ function renderTabletop() {
     hdr.appendChild(dot);
     hdr.appendChild(document.createTextNode(p.name));
     const st = document.createElement('span'); st.className = 'player-status';
-    if (game.phase === 'ended' && p.feedbackType === 'ok') { st.innerHTML = uiIcon('trophy', 'status-inline-icon') + ' 获胜'; st.className += ' won'; }
-    else if (p.conceded) { st.textContent = '认输'; st.className += ' lost'; }
-    else { st.textContent = '手牌' + p.hand.length + '张'; }
+    if (game.phase === 'ended' && p.feedbackType === 'ok') { st.innerHTML = uiIcon('trophy', 'status-inline-icon') + ' ' + t('status_win'); st.className += ' won'; }
+    else if (p.conceded) { st.textContent = t('status_lost'); st.className += ' lost'; }
+    else { st.textContent = t('hand_count', {N: p.hand.length}); }
     hdr.appendChild(st); card.appendChild(hdr);
 
     const cr = document.createElement('div'); cr.className = 'cards-row';
@@ -467,11 +467,11 @@ function renderTabletop() {
       const canControl = !isOnline || p.id === game.online.playerId;
       if (canControl) {
         el.style.cursor = 'pointer';
-        el.title = '点击插入 ' + cardFace(v);
+        el.title = t('card_tooltip', {N: cardFace(v)});
         el.onclick = () => { soundPlay('click'); tableAppendExpr(i, cardFace(v), { action: 'card', cardIndex: vi }); };
       } else {
         el.style.cursor = 'default';
-        el.title = p.name + ' 的公开手牌';
+        el.title = t('hand_public', {name: p.name});
       }
       cr.appendChild(el);
 
@@ -497,22 +497,22 @@ function renderTabletop() {
 
     const act = document.createElement('div'); act.className = 'player-actions';
     const btnSub = document.createElement('button');
-    btnSub.className = 'btn-submit'; btnSub.textContent = '提交';
+    btnSub.className = 'btn-submit'; btnSub.textContent = t('btn_submit');
     btnSub.disabled = (game.phase !== 'playing' || p.conceded || (isOnline && p.id !== game.online.playerId));
     btnSub.onclick = () => isOnline ? onlineSubmitFormula(i) : submitFormula(i);
     act.appendChild(btnSub);
 
     const btnDraw = document.createElement('button');
-    btnDraw.className = 'btn-draw'; btnDraw.textContent = '+牌';
+    btnDraw.className = 'btn-draw'; btnDraw.textContent = t('btn_draw');
     btnDraw.disabled = (game.phase !== 'playing' || p.conceded || p.hand.length >= game.maxCards || (isOnline && p.id !== game.online.playerId));
     btnDraw.onclick = () => isOnline ? onlineDrawCard(i) : drawForPlayer(i);
     act.appendChild(btnDraw);
 
     const btnConc = document.createElement('button');
-    btnConc.className = 'btn-concede'; btnConc.textContent = '认输';
+    btnConc.className = 'btn-concede'; btnConc.textContent = t('btn_give_up');
     btnConc.disabled = (game.phase !== 'playing' || p.conceded || (isOnline && p.id !== game.online.playerId));
     btnConc.onclick = function() {
-      if (!confirm('确定要认输吗？')) return;
+      if (!confirm(t('confirm_give_up'))) return;
       if (isOnline) onlineConcede(i);
       else concedePlayer(i);
     };
@@ -584,8 +584,8 @@ function renderOnlineChatBar() {
 
   const isPlaying = game.phase === "playing";
   const items = isPlaying
-    ? [["solved", "算出来了"], ["close", "就差一点"], ["luck", "加油"], ["nice", "漂亮"], ["gg", "GG"]]
-    : [["ready", "准备好了"], ["hello", "大家好"], ["wait", "再等等"], ["hurry", "快开始"], ["again", "再来"]];
+    ? [["solved", t("chat_got_it")], ["close", t("chat_close")], ["luck", t("chat_go")], ["nice", t("chat_nice")], ["gg", t("chat_gg")]]
+    : [["ready", t("chat_ready")], ["hello", t("chat_hello")], ["wait", t("chat_wait")], ["hurry", t("chat_start")], ["again", t("chat_again")]];
 
   items.forEach(function(item) {
     var btn = document.createElement("button");

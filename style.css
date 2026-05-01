@@ -695,6 +695,12 @@
 
 /* ========== 菜单底部 ========== */
 .menu-footer{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;padding-top:10px;border-top:1px solid rgba(180,150,100,.06)}
+.menu-link{display:inline-flex;align-items:center;justify-content:center;height:24px;line-height:1;gap:8px;padding:0;background:none;color:rgba(220,196,150,.55);border:none;border-radius:6px;cursor:pointer;font-size:.78em;font-weight:600;letter-spacing:.04em;transition:color 200ms ease,background 200ms ease;text-decoration:none}
+.menu-link:hover{background:rgba(180,150,100,.08);color:rgba(245,235,210,.85)}
+.menu-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.menu-icon .svg-icon{width:16px;height:16px;display:block}
+.menu-label{display:inline-flex;align-items:center;height:18px;line-height:18px;font-size:inherit}
+.menu-separator{height:24px;display:inline-flex;align-items:center;line-height:1;color:rgba(180,150,100,.12);font-size:.55em;user-select:none}
 .menu-footer-divider{color:rgba(180,150,100,.12);font-size:.55em;user-select:none}
 .btn-menu-secondary{background:none;color:rgba(220,196,150,.55);border:none;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:.78em;font-weight:600;letter-spacing:.04em;transition:color 200ms ease,background 200ms ease;text-decoration:none;display:inline-flex;align-items:center;gap:2px}
 .btn-menu-secondary:hover{background:rgba(180,150,100,.08);color:rgba(245,235,210,.85);border:none;transform:none}
