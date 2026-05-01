@@ -419,6 +419,7 @@ function publicPlayer(player) {
     host: !!player.host,
     feedback: player.feedback || "",
     feedbackType: player.feedbackType || "",
+    winningFormula: player.winningFormula || "",
     lastSeenAt: player.lastSeenAt || player.joinedAt || 0
   };
 }
@@ -756,6 +757,7 @@ function submitFormula(room, playerId, rawExpr, now) {
     room.rematchVotes = {};
     player.feedback = "获胜！" + expr + " = " + room.target;
     player.feedbackType = "ok";
+    player.winningFormula = expr;
     bump(room);
     addEvent(room, "win", player.name + " 获胜！" + expr + " = " + room.target, now, { playerId, expr });
     return { ok: true, win: true, result };

@@ -581,6 +581,7 @@ function applyOnlineSnapshot(room) {
     host: !!player.host,
     feedback: player.feedback || "",
     feedbackType: player.feedbackType || "",
+    winningFormula: player.winningFormula || "",
     inputDraft: isNewOnlineRound ? "" : (draftById[player.id] || ""),
     isAi: false,
     _newCardIdx: player.feedback && player.feedback.startsWith("+牌 →") ? player.hand.length - 1 : undefined

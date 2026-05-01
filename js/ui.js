@@ -199,6 +199,7 @@ function renderAll() {
   const area = document.getElementById('players-area'); area.innerHTML = '';
   const isSolo = game.mode === 'solo';
   const isAi = game.mode === 'ai';
+  area.classList.toggle('ai-mode', isAi);
   const isFirst = game._firstRender;
 
   game.players.forEach((p, i) => {
@@ -286,6 +287,11 @@ function renderAll() {
     input.placeholder = '组合算式 = 21';
     input.value = p.inputDraft || '';
     input.disabled = (game.phase !== 'playing' || p.conceded || (isAi && p.isAi));
+    if ((isSolo || isAi) && !p.isAi) {
+      input.inputMode = 'none';
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+    }
     input.addEventListener('input', () => { p.inputDraft = input.value; });
     act.appendChild(input);
 

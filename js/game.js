@@ -435,6 +435,7 @@ function submitFormula(idx) {
     p.feedback = '=' + game.target + ' 获胜！+' + game.currentScore + '分';
 
     p.feedbackType = 'ok';
+    p.winningFormula = expr;
     setFeedback(idx, p.feedback, 'ok');
     var winMsg = p.name + ' 提交算式 "' + expr + '" = ' + game.target + ' 获胜！！！+' + game.currentScore + '分';
     addLog(winMsg, 'win');
@@ -978,11 +979,22 @@ function showResult(winnerIdx) {
       }
     }
     detail.textContent = detailText;
+    const formulaEl = document.getElementById('result-formula');
+    if (formulaEl) {
+      if (winnerIdx >= 0 && p.winningFormula) {
+        formulaEl.textContent = p.winningFormula + ' = ' + game.target;
+        formulaEl.classList.remove('hidden');
+      } else {
+        formulaEl.classList.add('hidden');
+      }
+    }
   } else {
     if (typeof setSvgIcon === 'function') setSvgIcon(icon, 'handshake');
     else icon.textContent = '平';
     title.textContent = '本局无胜者';
     detail.textContent = '经过 ' + formatTime(game.timerSec) + ' 的比拼，无人算出' + game.target;
+    var drawFormula = document.getElementById('result-formula');
+    if (drawFormula) drawFormula.classList.add('hidden');
   }
   updateResultAgainButton();
 }
