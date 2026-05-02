@@ -118,7 +118,7 @@ function updateSolutionHint() {
     requestSolutionAnalysis();
     const cache = getCurrentSolutionCache();
     const ha = document.getElementById('hint-area');
-    if (!cache || cache.pending || cache.timedOut) {
+    if (!cache || cache.pending || cache.timedOut || !cache.completed) {
       ha.classList.add('hidden');
       ha.innerHTML = '';
     } else if (cache.simple.length === 0 && cache.cool.length === 0) {
@@ -277,7 +277,7 @@ function renderAll() {
         }
       });
     if (p._newCardIdx !== undefined) {
-      setTimeout(() => { p._newCardIdx = undefined; }, 200);
+      setTimeout(() => { p._newCardIdx = undefined; }, 620);
     }
     card.appendChild(cr);
 
@@ -545,7 +545,7 @@ function renderTabletop() {
         setTimeout(() => el.classList.remove('is-hit-deal'), 560);
       }
     });
-    if (p._newCardIdx !== undefined) { setTimeout(() => { p._newCardIdx = undefined; }, 200); }
+    if (p._newCardIdx !== undefined) { setTimeout(() => { p._newCardIdx = undefined; }, 620); }
     card.appendChild(cr);
 
     const display = document.createElement('div');

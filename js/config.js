@@ -19,7 +19,7 @@ const game = {
   scoreBreakdown: [],
   solutionRating: null,
   gameTags: [],
-  solutionCache: { handKey: '', simple: [], cool: [], pending: false, timedOut: false },
+  solutionCache: { handKey: '', simple: [], cool: [], pending: false, timedOut: false, completed: false },
   solutionWorker: null,
   solutionTaskId: 0,
   coolHintUsed: false,

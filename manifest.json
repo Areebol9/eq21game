@@ -2,7 +2,7 @@
   "name": "Equation 21 \u2014 \u7b97\u5f0f21\u70b9",
   "short_name": "Equation 21",
   "description": "A math card game where players form equations to reach 21",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0a1a0f",
   "theme_color": "#0b1d12",

@@ -78,8 +78,8 @@
 <!-- 主区域 -->
 <div id="main-container">
   <div id="stats-panel" class="hidden"></div>
-  <div id="hint-area" class="hidden"></div>
   <div id="players-area"></div>
+  <div id="hint-area" class="hidden"></div>
   <div id="tabletop-center" class="hidden">
     <div class="tc-stat"><div class="tc-val" id="tc-timer">00:00</div><div class="tc-label">用时</div></div>
     <div class="tc-stat"><div class="tc-val" id="tc-deck">40</div><div class="tc-label">牌库</div></div>
@@ -379,9 +379,45 @@
 <script src="js/game.js"></script>
 <script src="js/main.js"></script>
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(function(){});
-}
+(function() {
+  if (!('serviceWorker' in navigator)) return;
+
+  var params = new URLSearchParams(window.location.search || '');
+  if (params.has('reset-sw')) {
+    var cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('reset-sw');
+    var resetCaches = window.caches
+      ? caches.keys().then(function(keys) {
+          return Promise.all(keys.map(function(key) { return caches.delete(key); }));
+        })
+      : Promise.resolve();
+
+    Promise.all([
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        return Promise.all(registrations.map(function(reg) { return reg.unregister(); }));
+      }),
+      resetCaches
+    ]).then(function() {
+      window.location.replace(cleanUrl.toString());
+    }).catch(function() {
+      window.location.replace(cleanUrl.toString());
+    });
+    return;
+  }
+
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function(reg) {
+    reg.update();
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      if (refreshing) return;
+      refreshing = true;
+      if (!sessionStorage.getItem('sw-reloaded')) {
+        sessionStorage.setItem('sw-reloaded', '1');
+        window.location.reload();
+      }
+    });
+  }).catch(function(){});
+})();
 </script>
 </body>
 </html>

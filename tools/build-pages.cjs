@@ -6,8 +6,9 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
 const OUT = path.join(ROOT, "dist");
-const STATIC_FILES = ["index.html", "style.css", "manifest.json", "sw.js", "robots.txt", "sitemap.xml"];
+const STATIC_FILES = ["index.html", "style.css", "manifest.json", "robots.txt", "sitemap.xml", "_headers"];
 const STATIC_DIRS = ["js", "assets"];
+let buildCounter = 0;
 
 function rmDir(dir) {
   fs.rmSync(dir, { recursive: true, force: true });
@@ -40,23 +41,54 @@ function writeDeployConfig(onlineUrl) {
   fs.writeFileSync(path.join(OUT, "js", "deploy-config.js"), content, "utf8");
 }
 
+function makeCacheVersion(options) {
+  const explicit = options && Object.prototype.hasOwnProperty.call(options, "cacheVersion")
+    ? options.cacheVersion
+    : process.env.EQ21_CACHE_VERSION;
+  const raw = explicit || [
+    "v",
+    Date.now().toString(36),
+    (++buildCounter).toString(36)
+  ].join("-");
+  return String(raw || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "dev";
+}
+
+function writeServiceWorker(cacheVersion) {
+  const cacheName = "equation21-" + cacheVersion;
+  const source = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  const content = source.replace(
+    /const\s+CACHE\s*=\s*['"]equation21-[^'"]+['"];/,
+    "const CACHE = " + JSON.stringify(cacheName) + ";"
+  );
+  fs.writeFileSync(path.join(OUT, "sw.js"), content, "utf8");
+  return cacheName;
+}
+
 function buildPages(options) {
   const opts = options || {};
   const onlineUrl = normalizeUrl(Object.prototype.hasOwnProperty.call(opts, "onlineUrl") ? opts.onlineUrl : process.env.EQ21_ONLINE_URL);
+  const cacheVersion = makeCacheVersion(opts);
 
   rmDir(OUT);
   fs.mkdirSync(OUT, { recursive: true });
-  for (const file of STATIC_FILES) copyFile(file);
+  for (const file of STATIC_FILES) {
+    if (fs.existsSync(path.join(ROOT, file))) copyFile(file);
+  }
   for (const dir of STATIC_DIRS) copyDir(dir);
+  const cacheName = writeServiceWorker(cacheVersion);
   writeDeployConfig(onlineUrl);
 
   if (!opts.quiet) {
     console.log("Built Cloudflare Pages static site in dist/");
     console.log("EQ21_ONLINE_URL=" + (onlineUrl || "(fallback)"));
+    console.log("SW_CACHE=" + cacheName);
   }
-  return { outDir: OUT, onlineUrl };
+  return { outDir: OUT, onlineUrl, cacheName };
 }
 
 if (require.main === module) buildPages();
 
-module.exports = { buildPages, normalizeUrl };
+module.exports = { buildPages, normalizeUrl, makeCacheVersion };

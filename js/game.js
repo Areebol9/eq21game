@@ -14,7 +14,7 @@ function getSolutionHandKey(hand) {
 }
 
 function resetSolutionCache() {
-  State.set('solutionCache', { handKey: '', simple: [], cool: [], pending: false, timedOut: false });
+  State.set('solutionCache', { handKey: '', simple: [], cool: [], pending: false, timedOut: false, completed: false });
   State.set('coolHintUsed', false);
 }
 
@@ -65,14 +65,14 @@ function ensureSolutionWorker() {
       cache.cool = data.coolSolutions || [];
       cache.pending = false;
       cache.timedOut = !!data.timedOut;
+      cache.completed = true;
       _lastCheckedHand = '';
       recordPerfEvent({ type: 'solve', handKey: data.handKey, source: 'worker', timedOut: cache.timedOut });
       updateSolutionHint();
-      renderAll();
     };
     worker.onerror = function() {
       const cache = game.solutionCache;
-      if (cache) { cache.pending = false; cache.timedOut = true; }
+      if (cache) { cache.pending = false; cache.timedOut = true; cache.completed = false; }
     };
     State.set('solutionWorker', worker);
     return worker;
@@ -86,12 +86,12 @@ function requestSolutionAnalysis() {
   const p = game.players[0];
   if (!p || p.conceded) return;
   const handKey = getSolutionHandKey(p.hand);
-  if (game.solutionCache && game.solutionCache.handKey === handKey && game.solutionCache.pending) return;
-  if (game.solutionCache && game.solutionCache.handKey === handKey && (game.solutionCache.simple.length || game.solutionCache.cool.length || game.solutionCache.timedOut)) return;
+  const cache = game.solutionCache;
+  if (cache && cache.handKey === handKey && (cache.pending || cache.completed || cache.simple.length || cache.cool.length || cache.timedOut)) return;
 
   State.set('solutionTaskId', game.solutionTaskId + 1);
   const taskHand = [...p.hand];
-  State.set('solutionCache', { handKey, simple: [], cool: [], pending: true, timedOut: false, hand: taskHand });
+  State.set('solutionCache', { handKey, simple: [], cool: [], pending: true, timedOut: false, completed: false, hand: taskHand });
   const worker = ensureSolutionWorker();
   if (worker) {
     worker.postMessage({
@@ -114,6 +114,7 @@ function requestSolutionAnalysis() {
     cool: detailed.coolSolutions,
     pending: false,
     timedOut: detailed.timedOut,
+    completed: true,
     hand: taskHand
   });
 }

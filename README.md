@@ -3,7 +3,7 @@
 一款用扑克牌数字凑出 21 的网页卡牌游戏。玩家需要组合运算符与括号，写出结果等于 21 的算式。
 内置表达式解析器、AI 求解器、PWA 离线支持与联网房间。
 
-* AA browser-based math card game where players use card values and operators to build equations that equal 21.*
+*A A browser-based math card game where players use card values and operators to build equations that equal 21.*
 *Includes a custom expression engine, AI solver, PWA support, and online rooms.*
 
 **[在线试玩 / Play](https://eq21game.com)**
@@ -38,6 +38,7 @@
 | [更新日志](CHANGELOG.md) | 版本变更记录 |
 | [项目结构](docs/STRUCTURE.md) | 文件职责 & 修改指引 |
 | [架构分析](docs/ARCHITECTURE.md) | 设计决策 & 重构方向 |
+| [Deployment Troubleshooting](docs/DEPLOYMENT_TROUBLESHOOTING.md) | Pages / PWA / Service Worker 排查与救场 |
 
 ## 许可
 

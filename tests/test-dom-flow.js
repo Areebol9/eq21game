@@ -1006,6 +1006,70 @@ section("solve timeout does not show stale no-solution hint or consume hints");
   assert("timed out manual hint hides technical timeout wording", env.run("!__lastToast.includes('ms') && !__lastToast.includes('超时')"), true);
 }
 
+section("solo worker completed no-solution hint is cached");
+{
+  const workers = [];
+  function FakeWorker(url) {
+    this.url = url;
+    this.messages = [];
+    this.onmessage = null;
+    workers.push(this);
+  }
+  FakeWorker.prototype.postMessage = function(message) {
+    this.messages.push(message);
+  };
+
+  const env = createEnv({ Worker: FakeWorker });
+  const hint = env.document.getElementById("hint-area");
+
+  env.run(`
+    game.mode = 'solo';
+    game.difficulty = 'easy';
+    game.phase = 'playing';
+    game.target = 21;
+    game._maxHintShown = false;
+    game.players = [{ name: 'Solo', hand: [1, 1, 1], conceded: false }];
+    clearSolutionHint();
+    updateSolutionHint();
+  `);
+
+  assert("worker no-solution starts one request", workers[0].messages.length, 1);
+  const first = workers[0].messages[0];
+  workers[0].onmessage({
+    data: {
+      id: first.id,
+      handKey: first.handKey,
+      simpleSolutions: [],
+      coolSolutions: [],
+      timedOut: false
+    }
+  });
+
+  assert("worker no-solution marks cache completed", env.run("game.solutionCache.completed"), true);
+  assert("worker no-solution hint appears", hint.classList.contains("hidden"), false);
+  assert("worker no-solution hint has text", hint.innerHTML.length > 0, true);
+  assert("completed no-solution hand is not solved repeatedly", workers[0].messages.length, 1);
+
+  env.run("game.players[0].hand = [10, 10, 1]; updateSolutionHint();");
+  assert("new solvable hand starts a fresh request", workers[0].messages.length, 2);
+  assert("pending new hand clears old no-solution hint", hint.classList.contains("hidden"), true);
+  assert("pending new hand clears old no-solution text", hint.innerHTML, "");
+
+  const second = workers[0].messages[1];
+  workers[0].onmessage({
+    data: {
+      id: second.id,
+      handKey: second.handKey,
+      simpleSolutions: [{ expr: '10+10+A' }],
+      coolSolutions: [],
+      timedOut: false
+    }
+  });
+
+  assert("solvable worker response keeps no-solution hint hidden", hint.classList.contains("hidden"), true);
+  assert("completed solvable hand is not solved repeatedly", workers[0].messages.length, 2);
+}
+
 section("solo hint buttons wait for background solutions");
 {
   const env = createEnv();
@@ -1060,13 +1124,15 @@ section("solo worker ignores stale responses and keeps hints nonblocking");
     var __syncFallbackCalls = 0;
     var __toastCount = 0;
     var __lastToast = '';
+    var __renderAllCalls = 0;
+    var __updateSolutionHintCalls = 0;
     solveHandDetailed = function() {
       __syncFallbackCalls++;
       return { simpleSolutions: [], coolSolutions: [], timedOut: true };
     };
     showToast = function(msg) { __toastCount++; __lastToast = msg; };
-    renderAll = function() {};
-    updateSolutionHint = function() {};
+    renderAll = function() { __renderAllCalls++; };
+    updateSolutionHint = function() { __updateSolutionHintCalls++; };
     requestSolutionAnalysis();
   `);
 
@@ -1104,6 +1170,7 @@ section("solo worker ignores stale responses and keeps hints nonblocking");
   assert("pending hint handlers do not consume hints", env.run("game.stats.hintsUsed"), 0);
   assert("pending hint handlers avoid sync fallback", env.run("__syncFallbackCalls"), 0);
 
+  env.run("__renderAllCalls = 0; __updateSolutionHintCalls = 0;");
   workers[0].onmessage({
     data: {
       id: second.id,
@@ -1115,9 +1182,12 @@ section("solo worker ignores stale responses and keeps hints nonblocking");
   });
 
   assert("fresh response resolves pending cache", env.run("game.solutionCache.pending"), false);
+  assert("fresh response marks cache completed", env.run("game.solutionCache.completed"), true);
   assert("fresh response fills simple cache", env.run("game.solutionCache.simple.length"), 1);
   assert("fresh response fills cool cache", env.run("game.solutionCache.cool.length"), 1);
   assert("fresh response still avoids sync fallback", env.run("__syncFallbackCalls"), 0);
+  assert("fresh response updates hint area without full rerender", env.run("__updateSolutionHintCalls"), 1);
+  assert("fresh response does not rebuild cards", env.run("__renderAllCalls"), 0);
   assert("perf debug store is exposed when enabled", env.run("!!window.__eq21Perf"), true);
   assert("perf debug records stale response", env.run("window.__eq21Perf.events.some(function(e) { return e.type === 'worker-stale'; })"), true);
   assert("perf debug records worker solve", env.run("window.__eq21Perf.events.some(function(e) { return e.type === 'solve' && e.source === 'worker'; })"), true);
@@ -1146,6 +1216,7 @@ section("perf debug records fallback solve events");
     requestSolutionAnalysis();
   `);
   assert("fallback solve resolves cache", env.run("game.solutionCache.pending"), false);
+  assert("fallback solve marks cache completed", env.run("game.solutionCache.completed"), true);
   assert("perf debug records fallback source", env.run("window.__eq21Perf.events.some(function(e) { return e.type === 'solve' && e.source === 'fallback'; })"), true);
 }
 
