@@ -680,6 +680,7 @@ function goToMenu() {
   resetSolutionCache();
   State.set('phase', 'menu'); State.set('players', []); State.set('deck', []); State.set('timerSec', 0); State.set('aiSolved', false); State.set('aiSolution', null);
   State.set('_firstRender', false); State.set('_solving', false); _lastCheckedHand = '';
+  State.set('tabletopLayout', 'standard');
   if (typeof clearSolutionHint === 'function') clearSolutionHint();
   State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('solutionRating', null); State.set('gameTags', []);
   updateTimerUI(); updateDeckCount();
@@ -1004,6 +1005,7 @@ function resetGame() {
   resetSolutionCache();
   State.set('phase', 'menu'); State.set('players', []); State.set('deck', []); State.set('timerSec', 0); State.set('_maxHintShown', false);
   State.set('aiSolved', false); State.set('aiSolution', null); State.set('_firstRender', false); State.set('_solving', false); _lastCheckedHand = '';
+  State.set('tabletopLayout', 'standard');
   if (typeof clearSolutionHint === 'function') clearSolutionHint();
   State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('solutionRating', null); State.set('gameTags', []);
   updateTimerUI(); updateDeckCount();

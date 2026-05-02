@@ -7,7 +7,7 @@
     "test:full": "npm run test && node tests/test-solver-perf.js",
     "test:online": "node tests/test-online-room-core.js && node tests/test-online-protocol.js && node tests/test-online-load.js",
     "build:pages": "node tools/build-pages.cjs",
-    "deploy:pages": "npm run build:pages && wrangler pages deploy dist --project-name eq21game",
+    "deploy:pages": "npm run build:pages && wrangler pages deploy dist --project-name equation-21-simple",
     "dev:worker": "wrangler dev",
     "deploy:worker": "wrangler deploy"
   },

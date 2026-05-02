@@ -402,27 +402,73 @@ function renderTabletop() {
   const center = document.getElementById('tabletop-center');
   const isOnline = game.mode === 'online';
 
+  if (count === 4 && game.tabletopLayout === 'round' && window.innerWidth < 1024) {
+    game.tabletopLayout = 'standard';
+  }
+  const isRound = count === 4 && game.tabletopLayout === 'round';
+
   area.innerHTML = '';
-  area.classList.remove('online-lobby', 'tabletop-2p', 'tabletop-3p', 'tabletop-4p');
+  area.classList.remove('online-lobby', 'tabletop-2p', 'tabletop-3p', 'tabletop-4p', 'round-layout');
   area.classList.add('tabletop-' + count + 'p');
+  if (isRound) area.classList.add('round-layout');
   if (isOnline) area.classList.add('online-tabletop');
 
   if (center) {
     area.appendChild(center);
     center.classList.remove('hidden');
-    center.style.gridRow = '2';
-    center.style.gridColumn = count >= 3 ? '1 / 3' : '1';
+    if (isRound) {
+      center.style.left = 'calc(var(--ph) + var(--pg))';
+      center.style.top = 'calc(var(--ph) + var(--pg))';
+      center.style.width = 'calc(var(--pw) - var(--ph) - var(--pg))';
+      center.style.height = 'calc(var(--pw) - var(--ph) - var(--pg))';
+      center.style.gridRow = '';
+      center.style.gridColumn = '';
+    } else {
+      center.style.left = '';
+      center.style.top = '';
+      center.style.width = '';
+      center.style.height = '';
+      center.style.gridRow = '2';
+      center.style.gridColumn = count >= 3 ? '1 / 3' : '1';
+    }
+
+    let toggleBtn = center.querySelector('.tc-layout-toggle');
+    if (count === 4 && !isOnline && window.innerWidth >= 1024) {
+      if (!toggleBtn) {
+        toggleBtn = document.createElement('button');
+        toggleBtn.className = 'tc-layout-toggle';
+        toggleBtn.title = t('table_layout_toggle_tip');
+        toggleBtn.onclick = function() {
+          game.tabletopLayout = game.tabletopLayout === 'standard' ? 'round' : 'standard';
+          renderTabletop();
+        };
+        center.appendChild(toggleBtn);
+      }
+      toggleBtn.textContent = isRound ? t('table_layout_standard') : t('table_layout_round');
+      toggleBtn.style.display = '';
+    } else if (toggleBtn) {
+      toggleBtn.style.display = 'none';
+    }
   }
 
   const isFirst = game._firstRender;
 
-  // 玩家位置配置: { row, col, rotate }
+  // 玩家位置配置: standard 用 {row,col,rotate}, round 用 {left,top,w,h,rotate}
   const posConfigs = {
-    2: [{ row: 3, col: '1', rotate: false }, { row: 1, col: '1', rotate: true }],
-    3: [{ row: 3, col: '1 / 3', rotate: false }, { row: 1, col: '1', rotate: true }, { row: 1, col: '2', rotate: true }],
-    4: [{ row: 3, col: '1', rotate: false }, { row: 1, col: '1', rotate: true }, { row: 1, col: '2', rotate: true }, { row: 3, col: '2', rotate: false }]
+    2: [{ row: 3, col: '1', rotate: 0 }, { row: 1, col: '1', rotate: 180 }],
+    3: [{ row: 3, col: '1 / 3', rotate: 0 }, { row: 1, col: '1', rotate: 180 }, { row: 1, col: '2', rotate: 180 }],
+    4: {
+      standard: [{ row: 3, col: '1', rotate: 0 }, { row: 1, col: '1', rotate: 180 }, { row: 1, col: '2', rotate: 180 }, { row: 3, col: '2', rotate: 0 }],
+      round: [
+        { left: 'calc(var(--ph) + var(--pg))',                          top: 'calc(var(--pw) + var(--pg))',                          w: 'var(--pw)', h: 'var(--ph)', rotate: 0 },
+        { left: 'calc(0px - var(--ho))',                                top: 'calc(var(--ph) + var(--pg) + var(--ho))',             w: 'var(--pw)', h: 'var(--ph)', rotate: 90 },
+        { left: '0',                                                    top: '0',                                                    w: 'var(--pw)', h: 'var(--ph)', rotate: 180 },
+        { left: 'calc(var(--pw) + var(--pg) - var(--ho))',              top: 'var(--ho)',                                            w: 'var(--pw)', h: 'var(--ph)', rotate: -90 }
+      ]
+    }
   };
-  const positions = posConfigs[count] || posConfigs[2];
+  const configForCount = posConfigs[count];
+  const positions = (count === 4 ? configForCount[isRound ? 'round' : 'standard'] : configForCount) || posConfigs[2];
 
   entries.forEach((entry, visualIndex) => {
     const p = entry.player;
@@ -433,12 +479,25 @@ function renderTabletop() {
     if (p.conceded) card.classList.add('conceded');
     if (game.phase === 'ended' && p.feedbackType === 'ok') card.classList.add('winner');
     card.setAttribute('data-index', i);
-    card.style.gridRow = pos.row;
-    card.style.gridColumn = pos.col;
+    if (isRound) {
+      card.style.left = pos.left;
+      card.style.top = pos.top;
+      card.style.width = pos.w;
+      card.style.height = pos.h;
+    } else {
+      card.style.gridRow = pos.row;
+      card.style.gridColumn = pos.col;
+    }
 
-    if (pos.rotate) {
+    if (pos.rotate === 180) {
       card.className += ' player-top';
       card.style.transform = 'rotate(180deg)';
+    } else if (pos.rotate === 90) {
+      card.className += ' player-left';
+      card.style.transform = 'rotate(90deg)';
+    } else if (pos.rotate === -90) {
+      card.className += ' player-right';
+      card.style.transform = 'rotate(-90deg)';
     } else {
       card.className += ' player-bottom';
     }

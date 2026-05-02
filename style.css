@@ -805,6 +805,14 @@
   }
   .player-card.player-top { transform: none; border-radius: var(--radius); }
   .player-card.player-bottom { border-radius: var(--radius); }
+  #players-area.tabletop-4p.round-layout .player-card.player-left,
+  #players-area.tabletop-4p.round-layout .player-card.player-right {
+    transform: none;
+    max-width: 100%;
+    border-radius: var(--radius);
+  }
+  #players-area.tabletop-4p.round-layout .player-card.player-top { border-radius: 0 0 var(--radius) var(--radius); }
+  #players-area.tabletop-4p.round-layout .player-card.player-bottom { border-radius: var(--radius) var(--radius) 0 0; }
   #players-area.tabletop-2p,
   #players-area.tabletop-3p,
   #players-area.tabletop-4p {
@@ -1303,3 +1311,110 @@
 #players-area.tabletop-4p .player-card.player-bottom {
   border-radius: var(--radius) var(--radius) 0 0;
 }
+
+/* ========== 围桌圆桌布局（4人旋转 回旋风车·嵌入式中心） ========== */
+#players-area.tabletop-4p.round-layout {
+  --pw: clamp(340px, 40vw, 420px);
+  --ph: clamp(230px, 27vw, 280px);
+  --pg: clamp(14px, 1.8vw, 18px);
+  --ho: calc((var(--pw) - var(--ph)) / 2);
+  --sw: calc(var(--pw) + var(--ph) + var(--pg));
+  position: relative;
+  width: var(--sw);
+  height: var(--sw);
+  margin: 0 auto;
+  overflow: visible;
+  padding: 0;
+  display: block;
+}
+
+#players-area.tabletop-4p.round-layout .player-card {
+  position: absolute;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: none;
+  border-radius: var(--radius);
+}
+
+#players-area.tabletop-4p.round-layout #tabletop-center {
+  position: absolute;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid rgba(180,150,100,0.22);
+  overflow: visible;
+}
+
+#players-area.tabletop-4p.round-layout #tabletop-center .tc-stat {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+#players-area.tabletop-4p.round-layout #tabletop-center .tc-val { font-size: 0.92em; }
+#players-area.tabletop-4p.round-layout #tabletop-center .tc-label { font-size: 0.55em; }
+#players-area.tabletop-4p.round-layout #tabletop-center .tc-event {
+  flex: 0 0 100%;
+  font-size: 0.55em; max-width: none; text-align: center; margin-left: 0; white-space: normal;
+}
+
+#players-area.tabletop-4p.round-layout .player-card.player-left .player-actions,
+#players-area.tabletop-4p.round-layout .player-card.player-right .player-actions {
+  flex-wrap: wrap;
+}
+#players-area.tabletop-4p.round-layout .player-card.player-left .player-actions button,
+#players-area.tabletop-4p.round-layout .player-card.player-right .player-actions button {
+  padding: 4px 6px;
+  font-size: .68em;
+}
+
+/* 布局切换按钮 */
+.tc-layout-toggle {
+  background: rgba(180,150,100,0.10);
+  color: var(--gold-light);
+  border: 1px solid var(--gold-dim);
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .74em;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background .15s, color .15s, border-color .15s;
+  flex-shrink: 0;
+}
+.tc-layout-toggle:hover {
+  background: rgba(180,150,100,0.22);
+  color: var(--text-bright);
+  border-color: var(--gold);
+}
+.tc-layout-toggle:active {
+  transform: scale(.96);
+}
+
+@media(max-width:1023px) {
+  #players-area.tabletop-4p.round-layout {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto;
+    gap: 4px;
+  }
+  #players-area.tabletop-4p.round-layout .player-card {
+    position: static;
+    min-width: 0;
+    max-width: none;
+  }
+  #players-area.tabletop-4p.round-layout #tabletop-center {
+    position: static;
+    top: auto; left: auto;
+    width: auto; height: auto;
+  }
+} 

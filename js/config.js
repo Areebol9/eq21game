@@ -14,6 +14,7 @@ const game = {
   aiThinking: false, aiTimerId: null, aiCountdown: 0, aiCountdownInterval: null,
   aiSolved: false, aiSolution: null,
   _maxHintShown: false, _firstRender: false,
+  tabletopLayout: 'standard',
   currentScore: 0,
   scoreBreakdown: [],
   solutionRating: null,

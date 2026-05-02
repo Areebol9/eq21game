@@ -107,6 +107,19 @@ function init() {
   // 轻量键盘可访问性
   enableKeyboardActivation();
 
+  // 围桌布局自适应：窗口缩小时自动退回标准布局
+  var _layoutResizeTimer = null;
+  window.addEventListener('resize', function() {
+    if (_layoutResizeTimer) clearTimeout(_layoutResizeTimer);
+    _layoutResizeTimer = setTimeout(function() {
+      if (game.mode === 'local' && game.players.length === 4 &&
+          (game.phase === 'playing' || game.phase === 'ended') &&
+          typeof renderTabletop === 'function') {
+        renderTabletop();
+      }
+    }, 200);
+  });
+
   // 关闭预设 AI 倒计时
   stopAiThinking();
   State.set('_firstRender', false);

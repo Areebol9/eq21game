@@ -133,7 +133,10 @@ var I18N = {
       seat_opposite: "对家",
       seat_left: "左席",
       seat_right: "右席",
-      default_player: "玩家{N}"
+      default_player: "玩家{N}",
+      table_layout_standard: "标准布局",
+      table_layout_round: "围桌布局",
+      table_layout_toggle_tip: "切换桌位朝向"
     },
     en: {
       lang_toggle: "中文",
@@ -265,7 +268,10 @@ var I18N = {
       seat_opposite: "Opposite",
       seat_left: "Left",
       seat_right: "Right",
-      default_player: "Player{N}"
+      default_player: "Player{N}",
+      table_layout_standard: "Standard",
+      table_layout_round: "Round Table",
+      table_layout_toggle_tip: "Switch layout"
     }
   }
 };
