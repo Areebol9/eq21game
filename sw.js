@@ -1,4 +1,4 @@
-const CACHE = 'equation21-v28';
+const CACHE = 'equation21-v29';
 const FILES = [
   './index.html',
   './style.css',
@@ -32,6 +32,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request)
+      .then(response => {
+        const clone = response.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });

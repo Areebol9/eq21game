@@ -53,6 +53,25 @@ function extractAll(regex, text, groupIndex = 1) {
   return out;
 }
 
+function attrValue(tag, attr) {
+  const match = tag.match(new RegExp("\\b" + attr + "=[\"']([^\"']+)[\"']", "i"));
+  return match ? match[1] : "";
+}
+
+function findMeta(attr, value) {
+  const tags = indexHtml.match(/<meta\b[^>]*>/gi) || [];
+  return tags.find(tag => attrValue(tag, attr) === value) || "";
+}
+
+function metaContent(attr, value) {
+  return attrValue(findMeta(attr, value), "content");
+}
+
+function findLinkRel(rel) {
+  const tags = indexHtml.match(/<link\b[^>]*>/gi) || [];
+  return tags.find(tag => attrValue(tag, "rel") === rel) || "";
+}
+
 function checkExists(ref, desc) {
   const filePath = resolveLocal(ref);
   assert(`${desc}: ${ref}`, fs.existsSync(filePath), `missing ${rel(filePath)}`);
@@ -111,6 +130,76 @@ for (const href of stylesheets) checkExists(href, "stylesheet exists");
 for (const href of manifests) checkExists(href, "manifest exists");
 for (const src of scripts) checkExists(src, "script exists");
 for (const src of swRegs) checkExists(src, "service worker exists");
+
+console.log("\n============================================================");
+console.log("  static: SEO metadata");
+console.log("============================================================");
+
+const title = (indexHtml.match(/<title>([^<]+)<\/title>/i) || [null, ""])[1];
+const description = metaContent("name", "description");
+const canonical = attrValue(findLinkRel("canonical"), "href");
+const robots = metaContent("name", "robots");
+const ogImage = metaContent("property", "og:image");
+
+assert("SEO title names brand and game category",
+  title.includes("算式21点") && title.includes("Equation 21") && title.includes("在线数学纸牌游戏"),
+  title
+);
+assert("meta description covers core gameplay",
+  description.includes("在线数学纸牌游戏") && description.includes("21") && description.includes("AI 对战") && description.length <= 180,
+  description
+);
+assert("canonical URL points to production domain", canonical === "https://eq21game.com/", canonical);
+assert("robots meta allows indexing", robots === "index,follow", robots);
+for (const prop of ["og:type", "og:site_name", "og:title", "og:description", "og:url", "og:image"]) {
+  assert(`Open Graph tag exists: ${prop}`, !!metaContent("property", prop));
+}
+for (const name of ["twitter:card", "twitter:title", "twitter:description", "twitter:image"]) {
+  assert(`Twitter card tag exists: ${name}`, !!metaContent("name", name));
+}
+assert("social share image uses production asset URL",
+  ogImage === "https://eq21game.com/assets/og-image.png" &&
+  metaContent("name", "twitter:image") === ogImage,
+  ogImage
+);
+checkExists("assets/og-image.png", "social share image exists");
+assert("homepage has one visible h1 brand heading", /<h1\b[^>]*class=["'][^"']*\blogo-main\b/.test(indexHtml));
+assert("homepage includes indexable gameplay introduction",
+  /class=["']home-seo["'][\s\S]*算式21点[\s\S]*Equation 21[\s\S]*数学纸牌游戏[\s\S]*AI 对战[\s\S]*联网对战/.test(indexHtml),
+  "home-seo should describe brand, gameplay, and modes"
+);
+
+const jsonLdBlocks = extractAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi, indexHtml);
+assert("index.html includes JSON-LD structured data", jsonLdBlocks.length > 0);
+let appSchema = null;
+try {
+  appSchema = JSON.parse(jsonLdBlocks[0]);
+  assert("JSON-LD parses as JSON", true);
+} catch (e) {
+  assert("JSON-LD parses as JSON", false, e.message);
+}
+if (appSchema) {
+  const schemaTypes = Array.isArray(appSchema["@type"]) ? appSchema["@type"] : [appSchema["@type"]];
+  assert("JSON-LD co-types app as VideoGame and WebApplication",
+    schemaTypes.includes("VideoGame") && schemaTypes.includes("WebApplication"),
+    schemaTypes.join(", ")
+  );
+  assert("JSON-LD has required app fields",
+    appSchema.name === "Equation 21" &&
+    appSchema.url === "https://eq21game.com/" &&
+    appSchema.applicationCategory === "GameApplication" &&
+    appSchema.operatingSystem === "Web browser" &&
+    appSchema.offers &&
+    appSchema.offers.price === "0",
+    JSON.stringify(appSchema)
+  );
+}
+
+const robotsTxt = readText("robots.txt");
+const sitemapXml = readText("sitemap.xml");
+assert("robots.txt allows public crawling", /User-agent:\s*\*\s+Allow:\s*\//i.test(robotsTxt), robotsTxt);
+assert("robots.txt references production sitemap", robotsTxt.includes("Sitemap: https://eq21game.com/sitemap.xml"), robotsTxt);
+assert("sitemap.xml lists production homepage", sitemapXml.includes("<loc>https://eq21game.com/</loc>"), sitemapXml);
 
 console.log("\n============================================================");
 console.log("  static: manifest.json");

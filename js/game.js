@@ -8,66 +8,6 @@ function stopTimer() {
   if (game.timerInterval) { clearInterval(game.timerInterval); State.set('timerInterval', null); }
 }
 
-// ==================== Hidden performance diagnostics ====================
-const PERF_WARN_MS = {
-  hint: 50,
-  coolHint: 50,
-  fallback: 100,
-  worker: 1200
-};
-
-function perfNow() {
-  if (typeof performance !== 'undefined' && performance && typeof performance.now === 'function') return performance.now();
-  return Date.now();
-}
-
-function isPerfDebugEnabled() {
-  try {
-    return typeof window !== 'undefined' &&
-      window.location &&
-      typeof window.location.search === 'string' &&
-      window.location.search.indexOf('debug=perf') !== -1;
-  } catch (e) {
-    return false;
-  }
-}
-
-function getPerfDebugStore() {
-  if (!isPerfDebugEnabled() || typeof window === 'undefined') return null;
-  if (!window.__eq21Perf) {
-    window.__eq21Perf = {
-      enabled: true,
-      events: [],
-      slowHands: [],
-      clear: function() {
-        this.events.length = 0;
-        this.slowHands.length = 0;
-      }
-    };
-  }
-  return window.__eq21Perf;
-}
-
-function recordPerfEvent(event) {
-  const store = getPerfDebugStore();
-  if (!store) return;
-  const item = Object.assign({ ts: Date.now() }, event || {});
-  store.events.push(item);
-  if (store.events.length > 80) store.events.shift();
-  if (item.handKey && typeof item.elapsedMs === 'number') {
-    store.slowHands.push(item);
-    store.slowHands.sort((a, b) => (b.elapsedMs || 0) - (a.elapsedMs || 0));
-    if (store.slowHands.length > 20) store.slowHands.length = 20;
-  }
-}
-
-function warnPerfIfSlow(label, elapsedMs, limitMs, detail) {
-  if (!isPerfDebugEnabled() || typeof elapsedMs !== 'number' || elapsedMs <= limitMs) return;
-  if (typeof console !== 'undefined' && console && typeof console.warn === 'function') {
-    console.warn('[eq21 perf] ' + label + ' took ' + Math.round(elapsedMs) + 'ms', detail || {});
-  }
-}
-
 // ==================== Solo solution worker ====================
 function getSolutionHandKey(hand) {
   return [game.difficulty, game.target, hand.slice().sort((a, b) => a - b).join(',')].join('|');
@@ -85,6 +25,30 @@ function getCurrentSolutionCache() {
   return game.solutionCache && game.solutionCache.handKey === handKey ? game.solutionCache : null;
 }
 
+function isPerfDebugEnabled() {
+  try {
+    return typeof window !== 'undefined' && window.location && /(?:^|[?&])debug=perf(?:&|$)/.test(window.location.search || '');
+  } catch (e) {
+    return false;
+  }
+}
+
+function getPerfStore() {
+  if (!isPerfDebugEnabled() || typeof window === 'undefined') return null;
+  if (!window.__eq21Perf) window.__eq21Perf = { events: [], slowHands: [] };
+  return window.__eq21Perf;
+}
+
+function recordPerfEvent(event) {
+  const store = getPerfStore();
+  if (!store) return;
+  const item = Object.assign({ at: Date.now() }, event || {});
+  store.events.push(item);
+  if (item.type === 'solve' && item.handKey) {
+    store.slowHands.push({ handKey: item.handKey, source: item.source || 'unknown', elapsedMs: item.elapsedMs || 0 });
+  }
+}
+
 function ensureSolutionWorker() {
   if (game.solutionWorker) return game.solutionWorker;
   if (typeof Worker === 'undefined') return null;
@@ -93,53 +57,22 @@ function ensureSolutionWorker() {
     worker.onmessage = function(e) {
       const data = e.data || {};
       const cache = game.solutionCache;
-      const elapsedMs = cache && cache.startedAt ? perfNow() - cache.startedAt : null;
       if (!cache || data.id !== game.solutionTaskId || data.handKey !== cache.handKey) {
-        recordPerfEvent({
-          type: 'worker-stale',
-          source: 'worker',
-          id: data.id,
-          currentId: game.solutionTaskId,
-          handKey: data.handKey,
-          currentHandKey: cache ? cache.handKey : '',
-          stale: true,
-          elapsedMs
-        });
+        recordPerfEvent({ type: 'worker-stale', handKey: data.handKey || '', source: 'worker' });
         return;
       }
       cache.simple = data.simpleSolutions || [];
       cache.cool = data.coolSolutions || [];
       cache.pending = false;
       cache.timedOut = !!data.timedOut;
-      recordPerfEvent({
-        type: 'solve',
-        source: 'worker',
-        id: data.id,
-        handKey: data.handKey,
-        hand: cache.hand || [],
-        difficulty: game.difficulty,
-        elapsedMs,
-        timedOut: cache.timedOut,
-        simpleCount: cache.simple.length,
-        coolCount: cache.cool.length
-      });
-      warnPerfIfSlow('worker solve', elapsedMs, PERF_WARN_MS.worker, { handKey: data.handKey, timedOut: cache.timedOut });
       _lastCheckedHand = '';
+      recordPerfEvent({ type: 'solve', handKey: data.handKey, source: 'worker', timedOut: cache.timedOut });
       updateSolutionHint();
       renderAll();
     };
     worker.onerror = function() {
       const cache = game.solutionCache;
       if (cache) { cache.pending = false; cache.timedOut = true; }
-      recordPerfEvent({
-        type: 'worker-error',
-        source: 'worker',
-        handKey: cache ? cache.handKey : '',
-        hand: cache ? cache.hand || [] : [],
-        difficulty: game.difficulty,
-        elapsedMs: cache && cache.startedAt ? perfNow() - cache.startedAt : null,
-        timedOut: true
-      });
     };
     State.set('solutionWorker', worker);
     return worker;
@@ -157,9 +90,8 @@ function requestSolutionAnalysis() {
   if (game.solutionCache && game.solutionCache.handKey === handKey && (game.solutionCache.simple.length || game.solutionCache.cool.length || game.solutionCache.timedOut)) return;
 
   State.set('solutionTaskId', game.solutionTaskId + 1);
-  const taskStartedAt = perfNow();
   const taskHand = [...p.hand];
-  State.set('solutionCache', { handKey, simple: [], cool: [], pending: true, timedOut: false, startedAt: taskStartedAt, hand: taskHand });
+  State.set('solutionCache', { handKey, simple: [], cool: [], pending: true, timedOut: false, hand: taskHand });
   const worker = ensureSolutionWorker();
   if (worker) {
     worker.postMessage({
@@ -174,30 +106,14 @@ function requestSolutionAnalysis() {
     return;
   }
 
-  const fallbackStart = perfNow();
   const detailed = solveHandDetailed(taskHand, game.target, getBinaryOps(), { maxMs: SOLVE_BUDGETS.manualHintMs });
-  const fallbackElapsed = perfNow() - fallbackStart;
-  recordPerfEvent({
-    type: 'solve',
-    source: 'fallback',
-    id: game.solutionTaskId,
-    handKey,
-    hand: taskHand,
-    difficulty: game.difficulty,
-    elapsedMs: fallbackElapsed,
-    timedOut: detailed.timedOut,
-    simpleCount: detailed.simpleSolutions.length,
-    coolCount: detailed.coolSolutions.length,
-    cached: !!detailed.cached
-  });
-  warnPerfIfSlow('fallback solve', fallbackElapsed, PERF_WARN_MS.fallback, { handKey, timedOut: detailed.timedOut });
+  recordPerfEvent({ type: 'solve', handKey, source: 'fallback', timedOut: detailed.timedOut });
   State.set('solutionCache', {
     handKey,
     simple: detailed.simpleSolutions,
     cool: detailed.coolSolutions,
     pending: false,
     timedOut: detailed.timedOut,
-    startedAt: taskStartedAt,
     hand: taskHand
   });
 }
@@ -224,118 +140,106 @@ function describeCoolSolution(solution, handLength) {
 }
 
 function showHint() {
-  const perfStart = perfNow();
   if (game.mode !== 'solo' || game.phase !== 'playing') return;
   if (game.stats.hintsUsed >= game.stats.maxHints) return;
+  recordPerfEvent({ type: 'hint-click' });
   const p = game.players[0];
-  try {
-    requestSolutionAnalysis();
-    const cache = getCurrentSolutionCache();
-    if (!cache || cache.pending) {
-      clearSolutionHint();
-      showToast('我还在端详这手牌，提示次数先替你留着', 'submit');
-      renderAll();
-      return;
-    }
-    const solutionInfos = cache.simple.length ? cache.simple : cache.cool;
-    const solutions = solutionInfos.map(s => s.expr);
-    if (cache.timedOut && solutions.length === 0) {
-      clearSolutionHint();
-      showToast('这手牌藏得有点深，我先不消耗提示次数', 'submit');
-      addLog('提示：后台还在找更稳的思路，未消耗提示次数', 'hint');
-      renderAll();
-      return;
-    }
-    game.stats.hintsUsed++;
-    const level = game.stats.hintsUsed;
+  requestSolutionAnalysis();
+  const cache = getCurrentSolutionCache();
+  if (!cache || cache.pending) {
+    clearSolutionHint();
+    showToast('我还在端详这手牌，提示次数先替你留着', 'submit');
+    renderAll();
+    return;
+  }
+  const solutionInfos = cache.simple.length ? cache.simple : cache.cool;
+  const solutions = solutionInfos.map(s => s.expr);
+  if (cache.timedOut && solutions.length === 0) {
+    clearSolutionHint();
+    showToast('这手牌藏得有点深，我先不消耗提示次数', 'submit');
+    addLog('提示：后台还在找更稳的思路，未消耗提示次数', 'hint');
+    renderAll();
+    return;
+  }
+  game.stats.hintsUsed++;
+  const level = game.stats.hintsUsed;
 
-    if (solutions.length === 0) {
-      const msgs = [
-        '🤔 这手牌现在还没露出通向21的路，加一张试试',
-        '🧐 还差一点火候，再补一张也许就亮了',
-        '😅 这组牌挺倔，换一组会更轻松'
-      ];
-      showToast('提示 #' + level + '：' + msgs[Math.min(level - 1, msgs.length - 1)], 'error');
-      addLog('提示 #' + level + '：当前手牌暂未找到解', 'hint');
-    } else if (level === 1) {
-      const sol = solutions[0];
-      const hasMul = sol.includes('*'), hasDiv = sol.includes('/'), hasAdd = sol.includes('+'), hasSub = sol.includes('-');
-      const parts = [];
-      if (hasMul) parts.push('乘法');
-      if (hasDiv) parts.push('除法');
-      if (hasAdd) parts.push('加法');
-      if (hasSub) parts.push('减法');
-      if (!parts.length) parts.push('组合');
-      const firstStep = extractFirstStep(sol);
-      let hintMsg = '提示 #1：这手牌可以往 ' + parts.join(' 和 ') + ' 方向试';
-      if (firstStep) hintMsg += '，先盯住「' + firstStep + '」';
-      showToast(hintMsg, 'submit');
-      addLog('提示 #1：方向性提示已显示', 'hint');
-    } else if (level === 2) {
-      const sol = solutions[0];
-      const firstStep = extractFirstStep(sol);
-      if (firstStep) {
-        const tokens = tokenize(firstStep);
-        if (tokens.length === 3 && tokens[0].type === TOK_NUM && tokens[1].type === TOK_OP && tokens[2].type === TOK_NUM) {
-          try {
-            const subVal = evaluate(firstStep);
-            showToast('提示 #2：先算出「' + firstStep + ' = ' + formatNum(subVal) + '」，再处理剩余牌', 'submit');
-            addLog('提示 #2：中间值提示  → ' + firstStep + ' = ' + formatNum(subVal), 'hint');
-          } catch (e) {
-            showToast('提示 #2：尝试从「' + firstStep + '」开始', 'submit');
-            addLog('提示 #2：模糊步骤提示', 'hint');
-          }
-        } else {
-          showToast('提示 #2：试试先把几张牌合成一个关键中间值', 'submit');
+  if (solutions.length === 0) {
+    const msgs = [
+      '🤔 这手牌现在还没露出通向21的路，加一张试试',
+      '🧐 还差一点火候，再补一张也许就亮了',
+      '😅 这组牌挺倔，换一组会更轻松'
+    ];
+    showToast('提示 #' + level + '：' + msgs[Math.min(level - 1, msgs.length - 1)], 'error');
+    addLog('提示 #' + level + '：当前手牌暂未找到解', 'hint');
+  } else if (level === 1) {
+    const sol = solutions[0];
+    const hasMul = sol.includes('*'), hasDiv = sol.includes('/'), hasAdd = sol.includes('+'), hasSub = sol.includes('-');
+    const parts = [];
+    if (hasMul) parts.push('乘法');
+    if (hasDiv) parts.push('除法');
+    if (hasAdd) parts.push('加法');
+    if (hasSub) parts.push('减法');
+    if (!parts.length) parts.push('组合');
+    const firstStep = extractFirstStep(sol);
+    let hintMsg = '提示 #1：这手牌可以往 ' + parts.join(' 和 ') + ' 方向试';
+    if (firstStep) hintMsg += '，先盯住「' + firstStep + '」';
+    showToast(hintMsg, 'submit');
+    addLog('提示 #1：方向性提示已显示', 'hint');
+  } else if (level === 2) {
+    const sol = solutions[0];
+    const firstStep = extractFirstStep(sol);
+    if (firstStep) {
+      const tokens = tokenize(firstStep);
+      if (tokens.length === 3 && tokens[0].type === TOK_NUM && tokens[1].type === TOK_OP && tokens[2].type === TOK_NUM) {
+        try {
+          const subVal = evaluate(firstStep);
+          showToast('提示 #2：先算出「' + firstStep + ' = ' + formatNum(subVal) + '」，再处理剩余牌', 'submit');
+          addLog('提示 #2：中间值提示  → ' + firstStep + ' = ' + formatNum(subVal), 'hint');
+        } catch (e) {
+          showToast('提示 #2：尝试从「' + firstStep + '」开始', 'submit');
           addLog('提示 #2：模糊步骤提示', 'hint');
         }
       } else {
-        showToast('提示 #2：试着先合并其中两张牌', 'submit');
+        showToast('提示 #2：试试先把几张牌合成一个关键中间值', 'submit');
         addLog('提示 #2：模糊步骤提示', 'hint');
       }
     } else {
-      showToast('答案：' + solutions[0] + ' = 21', 'win');
-      addLog('提示 #3（答案）：' + solutions[0] + ' = 21', 'hint');
+      showToast('提示 #2：试着先合并其中两张牌', 'submit');
+      addLog('提示 #2：模糊步骤提示', 'hint');
     }
-    renderAll();
-  } finally {
-    const elapsed = perfNow() - perfStart;
-    recordPerfEvent({ type: 'hint-click', source: 'ui', elapsedMs: elapsed, handKey: p ? getSolutionHandKey(p.hand) : '' });
-    warnPerfIfSlow('hint click', elapsed, PERF_WARN_MS.hint);
+  } else {
+    showToast('答案：' + solutions[0] + ' = 21', 'win');
+    addLog('提示 #3（答案）：' + solutions[0] + ' = 21', 'hint');
   }
+  renderAll();
 }
 
 function showCoolHint() {
-  const perfStart = perfNow();
   const p = game.players[0];
-  try {
-    if (game.mode !== 'solo' || game.phase !== 'playing') return;
-    if (game.difficulty === 'easy') return;
-    requestSolutionAnalysis();
-    const cache = getCurrentSolutionCache();
-    if (!cache || cache.pending) {
-      showToast('我在翻找这手牌的妙处，稍等一拍', 'submit');
-      return;
-    }
-    if (!cache.cool.length) {
-      showToast('这手牌更适合朴素解法', 'submit');
-      return;
-    }
-    const solution = cache.cool[0];
-    const why = describeCoolSolution(solution, p ? p.hand.length : 0);
-    State.set('coolHintUsed', true);
-    showToast('妙解思路：' + why + '。' + solution.expr + ' = 21', 'win');
-    addLog('妙解提示：' + why + ' → ' + solution.expr + ' = 21', 'hint');
-    if (p) {
-      p.feedback = '妙解：' + why + '｜' + solution.expr;
-      p.feedbackType = 'info';
-    }
-    renderAll();
-  } finally {
-    const elapsed = perfNow() - perfStart;
-    recordPerfEvent({ type: 'cool-hint-click', source: 'ui', elapsedMs: elapsed, handKey: p ? getSolutionHandKey(p.hand) : '' });
-    warnPerfIfSlow('cool hint click', elapsed, PERF_WARN_MS.coolHint);
+  if (game.mode !== 'solo' || game.phase !== 'playing') return;
+  if (game.difficulty === 'easy') return;
+  recordPerfEvent({ type: 'cool-hint-click' });
+  requestSolutionAnalysis();
+  const cache = getCurrentSolutionCache();
+  if (!cache || cache.pending) {
+    showToast('我在翻找这手牌的妙处，稍等一拍', 'submit');
+    return;
   }
+  if (!cache.cool.length) {
+    showToast('这手牌更适合朴素解法', 'submit');
+    return;
+  }
+  const solution = cache.cool[0];
+  const why = describeCoolSolution(solution, p ? p.hand.length : 0);
+  State.set('coolHintUsed', true);
+  showToast('妙解思路：' + why + '。' + solution.expr + ' = 21', 'win');
+  addLog('妙解提示：' + why + ' → ' + solution.expr + ' = 21', 'hint');
+  if (p) {
+    p.feedback = '妙解：' + why + '｜' + solution.expr;
+    p.feedbackType = 'info';
+  }
+  renderAll();
 }
 
 // ==================== 玩家操作 ====================

@@ -15,6 +15,7 @@ const vm = require("vm");
 
 const ROOT = path.resolve(__dirname, "..");
 const SCRIPT_ORDER = [
+  "js/i18n.js",
   "js/config.js",
   "js/expression.js",
   "js/history.js",
@@ -387,6 +388,8 @@ function createEnv(options = {}) {
       innerWidth: isMobile ? 375 : 1024,
       innerHeight: isMobile ? 667 : 768,
       location: { search: options.debugPerf ? "?debug=perf" : "", protocol: "http:", origin: "http://localhost:8000" },
+      addEventListener() {},
+      removeEventListener() {},
       matchMedia(query) {
         return {
           media: query,

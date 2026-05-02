@@ -6,8 +6,8 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
 const OUT = path.join(ROOT, "dist");
-const STATIC_FILES = ["index.html", "style.css", "manifest.json", "sw.js"];
-const STATIC_DIRS = ["js"];
+const STATIC_FILES = ["index.html", "style.css", "manifest.json", "sw.js", "robots.txt", "sitemap.xml"];
+const STATIC_DIRS = ["js", "assets"];
 
 function rmDir(dir) {
   fs.rmSync(dir, { recursive: true, force: true });

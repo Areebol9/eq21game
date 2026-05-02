@@ -46,6 +46,9 @@ assert("dist/index.html exists", exists("index.html"));
 assert("dist/style.css exists", exists("style.css"));
 assert("dist/manifest.json exists", exists("manifest.json"));
 assert("dist/sw.js exists", exists("sw.js"));
+assert("dist/robots.txt exists", exists("robots.txt"));
+assert("dist/sitemap.xml exists", exists("sitemap.xml"));
+assert("dist/assets/og-image.png exists", exists("assets/og-image.png"));
 assert("dist/js directory exists", fs.existsSync(path.join(DIST, "js")) && fs.statSync(path.join(DIST, "js")).isDirectory());
 assert("dist/js/online.js exists", exists("js/online.js"));
 assert("dist/js/deploy-config.js exists", exists("js/deploy-config.js"));
@@ -65,6 +68,19 @@ if (exists("index.html")) {
     index.indexOf('src="js/online.js"') !== -1 &&
     index.indexOf('src="js/deploy-config.js"') < index.indexOf('src="js/online.js"')
   );
+  assert("dist index references production OG image",
+    index.includes('content="https://eq21game.com/assets/og-image.png"')
+  );
+}
+
+if (exists("robots.txt")) {
+  const robots = fs.readFileSync(path.join(DIST, "robots.txt"), "utf8");
+  assert("dist robots references sitemap", robots.includes("Sitemap: https://eq21game.com/sitemap.xml"), robots);
+}
+
+if (exists("sitemap.xml")) {
+  const sitemap = fs.readFileSync(path.join(DIST, "sitemap.xml"), "utf8");
+  assert("dist sitemap lists production homepage", sitemap.includes("<loc>https://eq21game.com/</loc>"), sitemap);
 }
 
 try {
