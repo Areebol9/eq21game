@@ -197,8 +197,9 @@ async function joinOnlineRoom() {
   setOnlineStatus("正在查询房间...", "info");
   try {
     const response = await fetchOnlineWithTimeout(baseUrl + "/api/rooms/" + roomCode, {}, ONLINE_HTTP_TIMEOUT_MS);
-    const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.error || "房间不存在");
+    let data;
+    try { data = await response.json(); } catch (_) { data = null; }
+    if (!response.ok || !data || !data.ok) throw new Error((data && data.error) || response.statusText || "房间不存在");
     connectOnlineRoom({ baseUrl, roomCode, name, wsUrl: data.wsUrl || "" });
   } catch (error) {
     if (error && error.code === "online_http_timeout") showOnlineServiceUrl();
