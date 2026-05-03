@@ -29,6 +29,7 @@ const game = {
     roomCode: '',
     playerId: '',
     seatToken: '',
+    wsUrl: '',
     connected: false,
     connecting: false,
     reconnecting: false,

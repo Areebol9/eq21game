@@ -185,7 +185,7 @@ async function createOnlineRoom() {
   }
 }
 
-function joinOnlineRoom() {
+async function joinOnlineRoom() {
   const baseUrl = normalizeOnlineBaseUrl(getOnlineFormValue("online-base-url", ""));
   const roomCode = getOnlineFormValue("online-room-code", "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   const name = getOnlineFormValue("online-player-name", "玩家");
@@ -194,7 +194,17 @@ function joinOnlineRoom() {
     return;
   }
   localStorage.setItem(ONLINE_BASE_KEY, baseUrl);
-  connectOnlineRoom({ baseUrl, roomCode, name });
+  setOnlineStatus("正在查询房间...", "info");
+  try {
+    const response = await fetchOnlineWithTimeout(baseUrl + "/api/rooms/" + roomCode, {}, ONLINE_HTTP_TIMEOUT_MS);
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || "房间不存在");
+    connectOnlineRoom({ baseUrl, roomCode, name, wsUrl: data.wsUrl || "" });
+  } catch (error) {
+    if (error && error.code === "online_http_timeout") showOnlineServiceUrl();
+    setOnlineStatus(error.message || "查询房间失败", "err");
+    showToast(error.message || "查询房间失败", "error");
+  }
 }
 
 function reconnectOnlineRoom() {
@@ -293,7 +303,8 @@ function saveOnlineSession(session) {
     roomCode: current.roomCode,
     name: current.name,
     playerId: current.playerId,
-    seatToken: current.seatToken
+    seatToken: current.seatToken,
+    wsUrl: current.wsUrl
   };
   setStorageItem(getCurrentWindowStorage(), ONLINE_SESSION_KEY, JSON.stringify(current));
   setStorageItem(localStorage, ONLINE_LAST_ROOM_KEY, JSON.stringify(lastRoom));
@@ -321,7 +332,8 @@ function loadOnlineSession() {
       roomCode: last.roomCode,
       name: last.name || getOnlineFormValue("online-player-name", "玩家"),
       playerId: last.playerId || "",
-      seatToken: last.seatToken || ""
+      seatToken: last.seatToken || "",
+      wsUrl: last.wsUrl || ""
     };
   } catch (e) {
     return null;
@@ -362,10 +374,19 @@ function connectOnlineRoom(session) {
     roomCode: session.roomCode,
     playerId: session.playerId || "",
     seatToken: session.seatToken || "",
+    wsUrl: session.wsUrl || "",
     connected: false,
     connecting: true,
     reconnecting: !!(session.playerId && session.seatToken),
     status: "正在连接房间..."
+  });
+  saveOnlineSession({
+    baseUrl: game.online.baseUrl,
+    roomCode: game.online.roomCode,
+    playerId: game.online.playerId,
+    seatToken: game.online.seatToken,
+    name: session.name || "",
+    wsUrl: game.online.wsUrl
   });
   updateModeBadge("联网对战");
   setOnlineStatus("正在连接房间 " + session.roomCode + "...", "info");
@@ -412,12 +433,13 @@ function connectOnlineRoom(session) {
     setOnlineStatus("连接异常，稍后会尝试重连", "err");
   };
 
-  ws.onclose = function() {
+  ws.onclose = function(event) {
     clearTimeout(connectTimer);
     if (onlineSocket === ws) onlineSocket = null;
     game.online.connected = false;
     game.online.connecting = false;
     stopTimer();
+    if (typeof console !== "undefined") console.warn("[online] ws.onclose code=" + (event && event.code) + " reason=" + (event && event.reason) + " wasClean=" + (event && event.wasClean));
     if (ws.__eq21TimedOut) {
       renderAll();
       return;
@@ -564,6 +586,7 @@ function applyOnlineSnapshot(room) {
     roomCode: room.roomCode,
     playerId: game.online.playerId,
     seatToken: game.online.seatToken,
+    wsUrl: game.online.wsUrl || "",
     name: getOnlinePlayerName()
   });
 

@@ -83,7 +83,14 @@ export default {
     const roomStatusMatch = path.match(/^\/api\/rooms\/([A-Za-z0-9]+)$/);
     if (roomStatusMatch && request.method === "GET") {
       const roomCode = roomStatusMatch[1].toUpperCase();
-      return roomStub(env, roomCode).fetch(new Request(url.origin + "/internal/status", { method: "GET" }));
+      const resp = await roomStub(env, roomCode).fetch(new Request(url.origin + "/internal/status", { method: "GET" }));
+      try {
+        const data = await resp.json();
+        if (data.ok) data.wsUrl = wsUrlFor(request, roomCode);
+        return json(data, resp.status);
+      } catch (_) {
+        return resp;
+      }
     }
 
     const wsMatch = path.match(/^\/ws\/([A-Za-z0-9]+)$/);
