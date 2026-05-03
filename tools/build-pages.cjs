@@ -69,7 +69,7 @@ function writeServiceWorker(cacheVersion) {
 
 function buildPages(options) {
   const opts = options || {};
-  const onlineUrl = normalizeUrl(Object.prototype.hasOwnProperty.call(opts, "onlineUrl") ? opts.onlineUrl : process.env.EQ21_ONLINE_URL);
+  const onlineUrl = normalizeUrl(Object.prototype.hasOwnProperty.call(opts, "onlineUrl") ? opts.onlineUrl : process.env.EQ21_ONLINE_URL) || "https://online.eq21game.com";
   const cacheVersion = makeCacheVersion(opts);
 
   rmDir(OUT);
