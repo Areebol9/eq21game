@@ -111,12 +111,6 @@ function init() {
     if (btn) soundPlay('click');
   });
 
-  // 桌面端不支持 Web Share API 时隐藏原生分享按钮
-  if (!navigator.share) {
-    var nativeShareBtn = document.getElementById('btn-native-share');
-    if (nativeShareBtn) nativeShareBtn.style.display = 'none';
-  }
-
   // 轻量键盘可访问性
   enableKeyboardActivation();
 
