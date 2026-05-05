@@ -22,7 +22,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="./manifest.json">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><defs><radialGradient id=%22bg%22 cx=%2250%25%22 cy=%2235%25%22><stop offset=%220%25%22 stop-color=%22%231a3525%22/><stop offset=%22100%25%22 stop-color=%22%2306100a%22/></radialGradient></defs><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22url(%23bg)%22 stroke=%22%23c9a96e%22 stroke-width=%222.5%22 stroke-opacity=%220.5%22/><text x=%2250%22 y=%2267%22 text-anchor=%22middle%22 font-family=%22Georgia,serif%22 font-weight=%22700%22 font-size=%2248%22 letter-spacing=%221%22 fill=%22%23d8b76a%22>21</text></svg>">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
 <link rel="stylesheet" href="style.css">
 <script type="application/ld+json">
 {
@@ -198,6 +199,12 @@
       <span class="menu-separator">|</span>
       <button class="menu-link" id="btn-lang" aria-label="切换语言"><span class="menu-icon" data-icon="lang"></span><span class="menu-label" data-i18n="lang_toggle">EN</span></button>
     </div>
+
+    <div class="menu-share">
+      <button class="menu-link" id="btn-native-share" onclick="nativeShare()" aria-label="分享"><span class="menu-icon" data-icon="share"></span><span class="menu-label">分享</span></button>
+      <span class="menu-separator">·</span>
+      <button class="menu-link" onclick="openFeedback()" aria-label="反馈"><span class="menu-icon" data-icon="check"></span><span class="menu-label">反馈</span></button>
+    </div>
   </div>
 </div>
 
@@ -324,6 +331,19 @@
     <button class="secondary" id="btn-online-reconnect" aria-label="重连上次房间" data-i18n="btn_reconnect">重连上次房间</button>
     <button class="secondary" id="btn-online-back" aria-label="返回菜单" data-i18n="btn_back">返回菜单</button>
     <div id="online-status" class="online-status"></div>
+  </div>
+</div>
+
+<!-- 反馈弹窗 -->
+<div id="feedback-overlay" class="overlay hidden">
+  <div class="dialog" style="max-width:440px">
+    <h2 class="dialog-title"><span class="inline-icon" data-icon="check"></span>反馈建议</h2>
+    <textarea id="feedback-text" class="feedback-textarea" rows="5" placeholder="请输入你的建议、想法或遇到的 bug..." aria-label="反馈内容"></textarea>
+    <div class="feedback-actions">
+      <button id="btn-feedback-submit" onclick="submitFeedback()" aria-label="提交反馈">提交至 GitHub Issues</button>
+      <button class="secondary" onclick="closeFeedback()" aria-label="取消">取消</button>
+    </div>
+    <p class="feedback-hint">提交后将打开 GitHub Issues 页面，请确认后点 "Submit new issue"</p>
   </div>
 </div>
 

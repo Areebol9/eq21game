@@ -28,6 +28,12 @@ function init() {
   document.getElementById('btn-close-rules').onclick = hideRules;
   document.getElementById('rules-overlay').onclick = (e) => { if (e.target === document.getElementById('rules-overlay')) hideRules(); };
 
+  // 反馈弹窗关闭
+  var feedbackOverlay = document.getElementById('feedback-overlay');
+  if (feedbackOverlay) {
+    feedbackOverlay.onclick = function(e) { if (e.target === feedbackOverlay) closeFeedback(); };
+  }
+
   // 难度选择
   document.querySelectorAll('.diff-option').forEach(btn => {
     btn.onclick = () => selectDifficulty(btn.dataset.diff, btn);
@@ -91,6 +97,7 @@ function init() {
     if (e.key === 'Escape') {
       if (!document.getElementById('rules-overlay').classList.contains('hidden')) hideRules();
       if (!document.getElementById('history-panel').classList.contains('hidden')) closeHistory();
+      if (!document.getElementById('feedback-overlay').classList.contains('hidden')) closeFeedback();
     }
   });
 
@@ -103,6 +110,12 @@ function init() {
     var btn = e.target.closest('button');
     if (btn) soundPlay('click');
   });
+
+  // 桌面端不支持 Web Share API 时隐藏原生分享按钮
+  if (!navigator.share) {
+    var nativeShareBtn = document.getElementById('btn-native-share');
+    if (nativeShareBtn) nativeShareBtn.style.display = 'none';
+  }
 
   // 轻量键盘可访问性
   enableKeyboardActivation();
@@ -143,4 +156,78 @@ function enableKeyboardActivation() {
       }
     });
   });
+}
+
+function getShareUrl() {
+  if (window.location.protocol === 'file:') return 'https://eq21game.com';
+  return window.location.origin + '/';
+}
+
+function copyShareLink() {
+  var url = getShareUrl();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() {
+      showToast('链接已复制！', 'submit');
+    }).catch(function() {
+      fallbackCopy(url);
+    });
+  } else {
+    fallbackCopy(url);
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('链接已复制！', 'submit');
+  } catch (e) {
+    showToast('复制失败，请手动复制链接', 'error');
+  }
+  document.body.removeChild(ta);
+}
+
+function nativeShare() {
+  var shareData = {
+    title: 'Equation 21 - 算式21点',
+    text: '在线数学纸牌游戏，用扑克牌和运算符组成等于21的算式！',
+    url: getShareUrl()
+  };
+  if (navigator.share) {
+    navigator.share(shareData).catch(function() {});
+  } else {
+    copyShareLink();
+  }
+}
+
+function getFeedbackGhUrl() { return 'https://github.com/Areebol9/eq21game'; }
+
+function openFeedback() {
+  var overlay = document.getElementById('feedback-overlay');
+  var textarea = document.getElementById('feedback-text');
+  if (overlay) overlay.classList.remove('hidden');
+  if (textarea) { textarea.value = ''; setTimeout(function() { textarea.focus(); }, 100); }
+}
+
+function closeFeedback() {
+  var overlay = document.getElementById('feedback-overlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+function submitFeedback() {
+  var textarea = document.getElementById('feedback-text');
+  var text = textarea ? textarea.value.trim() : '';
+  if (!text) {
+    showToast('请填写反馈内容', 'error');
+    return;
+  }
+  var issueUrl = getFeedbackGhUrl() + '/issues/new?title=' + encodeURIComponent('用户反馈') + '&body=' + encodeURIComponent(text + '\n\n---\n提交自: ' + getShareUrl());
+  window.open(issueUrl, '_blank', 'noopener');
+  closeFeedback();
 }

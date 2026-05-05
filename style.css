@@ -373,7 +373,7 @@
 }
 .home-shell{
   position:relative;width:min(1120px,100%);display:grid;grid-template-columns:minmax(250px,.86fr) minmax(460px,1.35fr);
-  grid-template-areas:"brand modes" "difficulty modes" "footer footer";
+  grid-template-areas:"brand modes" "difficulty modes" "footer footer" "share share";
   gap:18px 22px;align-items:center;margin:auto;
 }
 .home-brand{grid-area:brand;align-self:end}
@@ -381,6 +381,7 @@
 .home-difficulty{grid-area:difficulty;align-self:end}
 .home-seo{grid-area:seo}
 .home-shell .menu-footer{grid-area:footer}
+.home-shell .menu-share{grid-area:share}
 .home-table-cues{
   display:flex;gap:0;justify-content:center;align-items:flex-end;
   margin-top:17px;min-height:64px;opacity:1;position:relative;isolation:isolate;
@@ -712,12 +713,23 @@
 .menu-label{display:inline-flex;align-items:center;height:18px;line-height:18px;font-size:inherit}
 .menu-separator{height:24px;display:inline-flex;align-items:center;line-height:1;color:rgba(180,150,100,.12);font-size:.55em;user-select:none}
 .menu-footer-divider{color:rgba(180,150,100,.12);font-size:.55em;user-select:none}
+
+.menu-share{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding-top:8px;border-top:1px solid rgba(180,150,100,.04);
+}
+.menu-share .menu-link{
+  color:rgba(220,196,150,.4);font-size:.7em;font-weight:500;gap:5px;
+}
+.menu-share .menu-link:hover{color:rgba(245,235,210,.7)}
+.menu-share .menu-icon{width:14px;height:14px}
+.menu-share .menu-separator{color:rgba(180,150,100,.08);font-size:.45em}
 .btn-menu-secondary{background:none;color:rgba(220,196,150,.55);border:none;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:.78em;font-weight:600;letter-spacing:.04em;transition:color 200ms ease,background 200ms ease;text-decoration:none;display:inline-flex;align-items:center;gap:2px}
 .btn-menu-secondary:hover{background:rgba(180,150,100,.08);color:rgba(245,235,210,.85);border:none;transform:none}
 .dialog .btn-menu-secondary{font-size:.72em}
 
 @media(max-width:899px){
-  .home-shell{grid-template-columns:1fr;grid-template-areas:"brand" "modes" "difficulty" "footer";max-width:680px}
+    .home-shell{grid-template-columns:1fr;grid-template-areas:"brand" "modes" "difficulty" "footer" "share";max-width:680px}
   .home-brand{align-self:auto}
 }
 
@@ -770,7 +782,7 @@
   .dialog{padding:20px 16px 16px}
   .choice-grid{grid-template-columns:1fr;gap:6px}
   .home-screen{align-items:flex-start;padding:14px 12px 24px}
-  .home-shell{grid-template-columns:1fr;grid-template-areas:"brand" "modes" "difficulty" "footer";gap:10px;width:100%}
+    .home-shell{grid-template-columns:1fr;grid-template-areas:"brand" "modes" "difficulty" "footer" "share";gap:10px;width:100%}
   .home-brand{align-self:auto}
   .home-table-cues{display:none}
   .home-seo{padding:8px 6px;font-size:.78em;text-align:left}
@@ -1426,9 +1438,33 @@
     min-width: 0;
     max-width: none;
   }
-  #players-area.tabletop-4p.round-layout #tabletop-center {
-    position: static;
-    top: auto; left: auto;
-    width: auto; height: auto;
-  }
+   #players-area.tabletop-4p.round-layout #tabletop-center {
+     position: static;
+     top: auto; left: auto;
+     width: auto; height: auto;
+   }
 } 
+
+/* ========== 反馈弹窗 ========== */
+.feedback-textarea{
+  width:100%;padding:12px;border:1px solid var(--gold-dim);border-radius:8px;
+  background:#0d1b30;color:var(--gold-light);font-size:.92em;outline:none;
+  font-family:var(--font-main);resize:vertical;min-height:90px;
+  margin:8px 0;transition:border-color .2s;
+}
+.feedback-textarea:focus{border-color:var(--gold)}
+.feedback-textarea::placeholder{color:#445566}
+.feedback-actions{
+  display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px;
+}
+.feedback-actions button{
+  padding:10px 20px;font-size:.92em;font-weight:700;border:none;
+  border-radius:8px;cursor:pointer;transition:transform .1s,opacity .2s;
+  background:var(--gold);color:#1a1a2e;
+}
+.feedback-actions button:hover{transform:scale(1.03)}
+.feedback-actions button:active{transform:scale(.95)}
+.feedback-actions button.secondary{background:transparent;color:var(--text-dim);border:1px solid var(--gold-dim)}
+.feedback-hint{
+  color:var(--text-dim);font-size:.7em;text-align:center;margin-top:10px;line-height:1.4;
+}

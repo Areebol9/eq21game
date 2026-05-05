@@ -6,7 +6,7 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
 const OUT = path.join(ROOT, "dist");
-const STATIC_FILES = ["index.html", "style.css", "manifest.json", "robots.txt", "sitemap.xml", "_headers"];
+const STATIC_FILES = ["index.html", "share.html", "style.css", "manifest.json", "robots.txt", "sitemap.xml", "_headers"];
 const STATIC_DIRS = ["js", "assets"];
 let buildCounter = 0;
 

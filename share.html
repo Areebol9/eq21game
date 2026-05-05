@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Equation 21 - 算式21点</title>
+<meta name="description" content="在线数学纸牌游戏，用扑克牌数字和运算符组成等于21的算式。支持单人练习、AI对战和联网对战。">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://eq21game.com/share">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:title" content="Equation 21 - 算式21点">
+<meta property="og:description" content="在线数学纸牌游戏，用扑克牌和运算符组成等于21的算式！">
+<meta property="og:url" content="https://eq21game.com/share">
+<meta property="og:image" content="https://eq21game.com/assets/og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Equation 21 - 算式21点">
+<meta name="twitter:description" content="在线数学纸牌游戏，用扑克牌和运算符组成等于21的算式！">
+<meta name="twitter:image" content="https://eq21game.com/assets/og-image.jpg">
+<meta name="theme-color" content="#e94560">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
+<style>
+:root{
+--bg:#0a1a0f;--surface:#1a3525;
+--gold:#c9a96e;--gold-light:#dbb878;--gold-dim:#8b7355;
+--green:#5effa0;--red:#e05555;
+--text:#e0d8c8;--text-dim:#a09888;--text-bright:#f5efe0;
+--radius:10px;
+--font-main:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font-main);background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background-color:#0b1d12;
+  background-image:
+    radial-gradient(ellipse at 18% 10%,rgba(215,181,112,.13),transparent 34%),
+    radial-gradient(ellipse at 78% 28%,rgba(94,255,160,.08),transparent 36%),
+    radial-gradient(ellipse at 50% 110%,rgba(0,0,0,.56),transparent 55%),
+    repeating-linear-gradient(32deg,rgba(255,255,255,.018) 0,rgba(255,255,255,.018) 1px,transparent 1px,transparent 8px),
+    repeating-linear-gradient(-18deg,rgba(0,0,0,.08) 0,rgba(0,0,0,.08) 1px,transparent 1px,transparent 10px),
+    linear-gradient(145deg,#12351f 0%,#0b2415 42%,#061008 100%);
+  padding:clamp(14px,3vw,32px);
+}
+.share-card{
+  width:min(420px,100%);text-align:center;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(40,80,55,0.5) 0%,transparent 55%),
+    linear-gradient(180deg,rgba(21,42,30,.85) 0%,rgba(14,31,21,.92) 100%);
+  border:1px solid rgba(180,150,100,0.2);border-radius:12px;
+  padding:clamp(20px,5vw,36px) clamp(14px,4vw,28px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 8px 40px rgba(0,0,0,.55);
+  position:relative;overflow:hidden;
+}
+.share-card::before{
+  content:'';position:absolute;top:0;left:32px;right:32px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(180,150,100,.14),transparent);
+  pointer-events:none;
+}
+
+.share-logo{
+  font-family:'Georgia','Times New Roman','Songti SC',serif;
+  font-size:clamp(1.8em,5vw,2.6em);font-weight:900;letter-spacing:3px;line-height:1.2;
+  background:linear-gradient(180deg,#fff1b8 0%,#d6ad5e 40%,#8d6a2d 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)) drop-shadow(0 0 18px rgba(201,169,110,.35));
+  display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;
+  margin-bottom:2px;
+}
+.share-logo-mark{
+  display:inline-flex;width:.75em;height:.75em;
+  color:#d8b76a;-webkit-text-fill-color:currentColor;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));
+}
+.share-logo-cn{font-size:.68em;font-weight:800}
+.share-logo-num{
+  font-family:'Georgia','Times New Roman',serif;
+  font-size:1.1em;font-weight:600;
+  display:inline-block;transform:scaleX(.72);
+  color:#d6ad5e;-webkit-text-fill-color:#d6ad5e;
+}
+
+.share-subtitle{
+  font-size:.75em;color:rgba(201,169,110,.5);letter-spacing:.22em;
+  font-style:italic;font-weight:400;margin-bottom:18px;
+}
+
+.share-cues{
+  display:flex;gap:0;justify-content:center;align-items:flex-end;
+  margin:0 auto 20px;min-height:56px;position:relative;isolation:isolate;
+}
+.share-cues::after{
+  content:'';position:absolute;left:50%;bottom:2px;width:72px;height:10px;
+  transform:translateX(-50%);
+  background:radial-gradient(ellipse at center,rgba(0,0,0,.08) 0%,rgba(0,0,0,0) 44%,transparent 72%);
+  filter:blur(.3px);pointer-events:none;z-index:0;
+}
+.cue-card{
+  width:36px;height:51px;border:1px solid rgba(154,139,95,.50);border-radius:6px;
+  background:linear-gradient(145deg,#dfe5dc 0%,#cbd5cc 54%,#9daa9a 100%);
+  box-shadow:inset 0 0 0 1px rgba(246,248,234,.34),inset 0 -6px 10px rgba(35,52,37,.08),0 3px 7px rgba(0,0,0,.30);
+  position:relative;display:flex;align-items:center;justify-content:center;
+  font-family:'Georgia','Times New Roman',serif;margin:0 -1px;
+}
+.cue-card:nth-child(1){transform:rotate(-5deg) translateY(2px) translateX(2px)}
+.cue-card:nth-child(2){transform:rotate(0deg) translateY(-3px);z-index:2}
+.cue-card:nth-child(3){transform:rotate(5deg) translateY(2px) translateX(-2px)}
+.cue-card::before{
+  content:'';position:absolute;inset:2px;border:1px solid rgba(91,98,73,.10);
+  border-radius:4px;pointer-events:none;z-index:0;
+}
+.cue-s{
+  font-size:13px;line-height:1;opacity:.88;position:relative;z-index:1;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.16));
+}
+.cue-corner{
+  position:absolute;display:flex;flex-direction:column;align-items:center;
+  line-height:1;font-style:normal;z-index:1;
+}
+.cue-corner.tl{top:3px;left:3px}
+.cue-corner.br{bottom:3px;right:3px;transform:rotate(180deg)}
+.cue-corner b{font-size:7px;font-weight:800;opacity:.85}
+.cue-corner .suit-icon{width:5px;height:5px;opacity:.82}
+.suit-red{color:#7f3f36}
+.suit-black{color:#1c272b}
+.suit-icon{display:inline-block;width:1em;height:1em;vertical-align:top}
+
+.share-desc{
+  color:rgba(224,216,200,.72);font-size:.88em;line-height:1.65;
+  margin-bottom:24px;letter-spacing:.03em;
+}
+
+.share-actions{
+  display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:18px;
+}
+.share-btn{
+  flex:1 1 140px;max-width:180px;min-width:120px;height:44px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:.92em;font-weight:700;border:none;border-radius:8px;
+  cursor:pointer;transition:transform .1s,opacity .2s,filter .15s;
+  font-family:var(--font-main);
+}
+.share-btn:active{transform:scale(.96)}
+.share-btn-primary{
+  background:linear-gradient(135deg,var(--gold),#b8944e);color:#1a1a2e;
+}
+.share-btn-primary:hover{filter:brightness(1.08)}
+.share-btn-secondary{
+  background:rgba(180,150,100,0.1);color:var(--gold-light);border:1px solid var(--gold-dim);
+}
+.share-btn-secondary:hover{background:rgba(180,150,100,0.18)}
+.share-btn-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center}
+
+.share-feedback{
+  min-height:28px;color:var(--green);font-size:.82em;font-weight:600;
+  opacity:0;transition:opacity .2s;
+}
+.share-feedback.show{opacity:1}
+
+.share-cta{
+  display:inline-flex;align-items:center;gap:6px;
+  color:rgba(220,196,150,.5);font-size:.78em;font-weight:600;text-decoration:none;
+  transition:color .2s;letter-spacing:.03em;
+  margin-top:4px;
+}
+.share-cta:hover{color:rgba(245,235,210,.8)}
+.share-cta-arrow{font-size:1.1em;transition:transform .2s}
+.share-cta:hover .share-cta-arrow{transform:translateX(3px)}
+
+.share-footer-ornament{
+  margin-top:24px;color:rgba(201,169,110,.15);font-size:1.1em;letter-spacing:8px;
+  user-select:none;
+}
+</style>
+</head>
+<body>
+
+<div class="share-card">
+  <h1 class="share-logo">
+    <span class="share-logo-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4C8.1 6.5 4.7 9.2 4.7 12.8c0 2.45 1.82 4.25 4.12 4.25 1.23 0 2.25-.5 2.88-1.32-.26 1.8-1.1 3.23-2.52 4.42h5.64c-1.42-1.19-2.26-2.62-2.52-4.42.63.82 1.65 1.32 2.88 1.32 2.3 0 4.12-1.8 4.12-4.25 0-3.6-3.4-6.3-7.3-10.4Z"/></svg>
+    </span>
+    <span class="share-logo-cn">算式</span>
+    <span class="share-logo-num">21</span>
+    <span class="share-logo-cn">点</span>
+    <span class="share-logo-mark" aria-hidden="true" style="opacity:.72">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.9C9.6 2.9 7.6 4.9 7.6 7.3C7.6 8.2 7.8 9 8.2 9.6C7.6 9.4 7 9.2 6.2 9.2C3.8 9.2 1.8 11.2 1.8 13.7C1.8 16.1 3.8 18.1 6.2 18.1C8.3 18.1 10 16.7 10.5 14.8C10.4 17.4 9.4 19.8 7.4 21.8H16.6C14.6 19.8 13.6 17.4 13.5 14.8C14 16.7 15.7 18.1 17.8 18.1C20.2 18.1 22.2 16.1 22.2 13.7C22.2 11.2 20.2 9.2 17.8 9.2C17 9.2 16.4 9.4 15.8 9.6C16.2 9 16.4 8.2 16.4 7.3C16.4 4.9 14.4 2.9 12 2.9Z"/></svg>
+    </span>
+  </h1>
+  <div class="share-subtitle">Equation 21 · The Math Card Game</div>
+
+  <div class="share-cues" aria-hidden="true">
+    <span class="cue-card">
+      <i class="cue-corner tl suit-black"><b>A</b><svg class="suit-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.4C8.1 6.5 4.7 9.2 4.7 12.8c0 2.45 1.82 4.25 4.12 4.25 1.23 0 2.25-.5 2.88-1.32-.26 1.8-1.1 3.23-2.52 4.42h5.64c-1.42-1.19-2.26-2.62-2.52-4.42.63.82 1.65 1.32 2.88 1.32 2.3 0 4.12-1.8 4.12-4.25 0-3.6-3.4-6.3-7.3-10.4Z"/></svg></i>
+      <svg class="suit-icon cue-s suit-black" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.4C8.1 6.5 4.7 9.2 4.7 12.8c0 2.45 1.82 4.25 4.12 4.25 1.23 0 2.25-.5 2.88-1.32-.26 1.8-1.1 3.23-2.52 4.42h5.64c-1.42-1.19-2.26-2.62-2.52-4.42.63.82 1.65 1.32 2.88 1.32 2.3 0 4.12-1.8 4.12-4.25 0-3.6-3.4-6.3-7.3-10.4Z"/></svg>
+      <i class="cue-corner br suit-black"><b>A</b><svg class="suit-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.4C8.1 6.5 4.7 9.2 4.7 12.8c0 2.45 1.82 4.25 4.12 4.25 1.23 0 2.25-.5 2.88-1.32-.26 1.8-1.1 3.23-2.52 4.42h5.64c-1.42-1.19-2.26-2.62-2.52-4.42.63.82 1.65 1.32 2.88 1.32 2.3 0 4.12-1.8 4.12-4.25 0-3.6-3.4-6.3-7.3-10.4Z"/></svg></i>
+    </span>
+    <span class="cue-card">
+      <i class="cue-corner tl suit-red"><b>4</b><svg class="suit-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 20.5C7.35 16.35 4.1 13.45 4.1 9.75A4.05 4.05 0 0 1 8.2 5.6c1.78 0 3.05.92 3.8 2.02.75-1.1 2.02-2.02 3.8-2.02a4.05 4.05 0 0 1 4.1 4.15c0 3.7-3.25 6.6-7.9 10.75Z"/></svg></i>
+      <svg class="suit-icon cue-s suit-red" viewBox="0 0 24 24"><path fill="currentColor" d="M12 20.5C7.35 16.35 4.1 13.45 4.1 9.75A4.05 4.05 0 0 1 8.2 5.6c1.78 0 3.05.92 3.8 2.02.75-1.1 2.02-2.02 3.8-2.02a4.05 4.05 0 0 1 4.1 4.15c0 3.7-3.25 6.6-7.9 10.75Z"/></svg>
+      <i class="cue-corner br suit-red"><b>4</b><svg class="suit-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 20.5C7.35 16.35 4.1 13.45 4.1 9.75A4.05 4.05 0 0 1 8.2 5.6c1.78 0 3.05.92 3.8 2.02.75-1.1 2.02-2.02 3.8-2.02a4.05 4.05 0 0 1 4.1 4.15c0 3.7-3.25 6.6-7.9 10.75Z"/></svg></i>
+    </span>
+    <span class="cue-card">
+      <i class="cue-corner tl suit-red"><b>9</b><svg class="suit-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.6 19.35 12 12 21.4 4.65 12 12 2.6Z"/></svg></i>
+      <svg class="suit-icon cue-s suit-red" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.6 19.35 12 12 21.4 4.65 12 12 2.6Z"/></svg>
+      <i class="cue-corner br suit-red"><b>9</b><svg class="suit-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.6 19.35 12 12 21.4 4.65 12 12 2.6Z"/></svg></i>
+    </span>
+  </div>
+
+  <p class="share-desc">用扑克牌数字和运算符<br>组成恰好等于 21 的算式</p>
+
+  <div class="share-actions">
+    <button class="share-btn share-btn-primary" onclick="copyLink()">
+      <span class="share-btn-icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="4" width="12" height="16" rx="2"/><path d="M4 8v12a2 2 0 0 0 2 2h8"/><path d="M16 4H8a2 2 0 0 0-2 2"/></svg>
+      </span>
+      <span id="copy-text">复制链接</span>
+    </button>
+    <button class="share-btn share-btn-secondary" id="btn-share" onclick="doShare()">
+      <span class="share-btn-icon">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      </span>
+      分享
+    </button>
+  </div>
+
+  <div class="share-feedback" id="feedback">已复制！</div>
+
+  <a class="share-cta" href="./">
+    开始游戏 <span class="share-cta-arrow">→</span>
+  </a>
+
+  <div class="share-footer-ornament" aria-hidden="true">♠ ♥ ♦ ♣</div>
+</div>
+
+<script>
+var HOST = (function() {
+  if (window.location.protocol === 'file:') return 'https://eq21game.com/';
+  return window.location.origin + '/';
+})();
+
+function copyLink() {
+  var copy = function(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function(resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); resolve(); } catch (e) { reject(e); }
+      document.body.removeChild(ta);
+    });
+  };
+  copy(HOST).then(function() {
+    var el = document.getElementById('copy-text');
+    var fb = document.getElementById('feedback');
+    el.textContent = '已复制！';
+    fb.classList.add('show');
+    setTimeout(function() {
+      el.textContent = '复制链接';
+      fb.classList.remove('show');
+    }, 1800);
+  }).catch(function() {
+    var el = document.getElementById('copy-text');
+    el.textContent = '复制失败';
+    setTimeout(function() { el.textContent = '复制链接'; }, 1800);
+  });
+}
+
+function doShare() {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Equation 21 - 算式21点',
+      text: '在线数学纸牌游戏，用扑克牌和运算符组成等于21的算式！',
+      url: HOST
+    }).catch(function(){});
+  } else {
+    copyLink();
+  }
+}
+
+(function() {
+  if (!navigator.share) {
+    var btn = document.getElementById('btn-share');
+    btn.textContent = '复制链接';
+    btn.onclick = copyLink;
+  }
+})();
+</script>
+
+</body>
+</html>

@@ -30,3 +30,6 @@ desktop.ini
 
 # Kilo development plans
 .kilo/
+
+# Project internal rules
+AGENTS.md
