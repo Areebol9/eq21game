@@ -65,36 +65,36 @@ function clearSolutionHint() {
 
 function updateFooterBar() {
   const fb = document.getElementById('footer-bar');
-  if (game.phase === 'menu') { fb.innerHTML = footerIcon('card') + '选择游戏模式开始吧！'; return; }
-  if (game.phase === 'ended') { fb.innerHTML = footerIcon('trophy') + '游戏结束！'; return; }
+  if (game.phase === 'menu') { fb.innerHTML = footerIcon('card') + t('footer_menu'); return; }
+  if (game.phase === 'ended') { fb.innerHTML = footerIcon('trophy') + t('footer_game_over'); return; }
   const isSolo = game.mode === 'solo';
   const isAi = game.mode === 'ai';
   if (isSolo) {
     const p = game.players[0];
-    if (!p || p.conceded) { fb.innerHTML = footerIcon('single') + '你已认输'; return; }
+    if (!p || p.conceded) { fb.innerHTML = footerIcon('single') + t('footer_conceded'); return; }
     if (game.aiThinking) {
-      fb.innerHTML = footerIcon('ai') + 'AI思考中...剩余' + game.aiCountdown + 's';
+      fb.innerHTML = footerIcon('ai') + t('footer_ai_thinking_ai', {s: game.aiCountdown});
     } else {
-      fb.innerHTML = footerIcon('card') + '手牌' + p.hand.length + '张 | 输入算式后提交 | 提示剩余' + (game.stats ? game.stats.maxHints - game.stats.hintsUsed : 0) + '次';
+      fb.innerHTML = footerIcon('card') + t('footer_solo', {N: p.hand.length, hint: game.stats ? game.stats.maxHints - game.stats.hintsUsed : 0});
     }
   } else if (isAi) {
     const human = game.players[0];
     const ai = game.players[1];
-    if (human && human.conceded) { fb.innerHTML = footerIcon('single') + '你已认输'; return; }
+    if (human && human.conceded) { fb.innerHTML = footerIcon('single') + t('footer_conceded'); return; }
     if (game.aiThinking) {
-      fb.innerHTML = footerIcon('ai') + '对手在思考...' + game.aiCountdown + 's';
+      fb.innerHTML = footerIcon('ai') + t('footer_ai_thinking_opp', {s: game.aiCountdown});
     } else if (game.aiSolved) {
-      fb.innerHTML = footerIcon('ai') + '对手似乎已经找到答案！';
+      fb.innerHTML = footerIcon('ai') + t('footer_ai_solved');
     } else {
-      fb.innerHTML = footerIcon('target') + '快！尽快算出' + game.target + '！ | 你的手牌' + human.hand.length + '张';
+      fb.innerHTML = footerIcon('target') + t('footer_ai', {target: game.target, N: human.hand.length});
     }
   } else if (game.mode === 'local') {
-    fb.innerHTML = footerIcon('table') + '围桌中 · ' + game.players.filter(p => !p.conceded).length + '人对弈 · 牌库' + game.deck.length + ' · 目标 ' + game.target;
+    fb.innerHTML = footerIcon('table') + t('footer_local', {N: game.players.filter(function(p){ return !p.conceded; }).length, deck: game.deck.length, target: game.target});
   } else if (game.mode === 'online') {
-    const state = game.online.connected ? '已连接' : (game.online.connecting ? '连接中' : '离线');
-    const room = game.online.roomCode ? '房间 ' + game.online.roomCode + ' · ' : '';
-    if (game.phase === 'lobby') fb.innerHTML = footerIcon('online') + room + state + ' · 等待房主开局';
-    else fb.innerHTML = footerIcon('online') + room + state + ' · ' + game.players.filter(p => !p.conceded).length + '人在线对弈 · 牌库' + game.deck.length;
+    const state = game.online.connected ? t('footer_online_connected') : (game.online.connecting ? t('footer_online_connecting') : t('footer_online_offline'));
+    const room = game.online.roomCode ? 'Room ' + game.online.roomCode + ' \u00b7 ' : '';
+    if (game.phase === 'lobby') fb.innerHTML = footerIcon('online') + room + state + ' \u00b7 ' + t('footer_online_lobby');
+    else fb.innerHTML = footerIcon('online') + room + state + ' \u00b7 ' + t('footer_online_playing', {N: game.players.filter(function(p){ return !p.conceded; }).length, deck: game.deck.length});
   }
 }
 
@@ -123,7 +123,7 @@ function updateSolutionHint() {
       ha.innerHTML = '';
     } else if (cache.simple.length === 0 && cache.cool.length === 0) {
       ha.classList.remove('hidden');
-      ha.innerHTML = '🤔 当前手牌<em>似乎无解</em>，建议加牌试试';
+      ha.innerHTML = t('hint_no_solution_message');
     } else {
       ha.classList.add('hidden');
       ha.innerHTML = '';
@@ -284,7 +284,7 @@ function renderAll() {
     const act = document.createElement('div'); act.className = 'player-actions';
     const input = document.createElement('input');
     input.type = 'text'; input.className = 'formula-input';
-    input.placeholder = '组合算式 = 21';
+    input.placeholder = t('input_placeholder');
     input.value = p.inputDraft || '';
     input.disabled = (game.phase !== 'playing' || p.conceded || (isAi && p.isAi));
     if ((isSolo || isAi) && !p.isAi) {
@@ -379,7 +379,7 @@ function renderAll() {
   if (isSolo && game.phase === 'playing') {
     const sp = document.getElementById('stats-panel');
     sp.classList.remove('hidden');
-    sp.innerHTML = uiIcon('history', 'stats-inline-icon') + ' 提交:<span>' + game.stats.submits + '</span> | 提示:<span>' + game.stats.hintsUsed + '/' + game.stats.maxHints + '</span> | 加牌:<span>' + game.stats.draws + '</span>';
+    sp.innerHTML = uiIcon('history', 'stats-inline-icon') + ' ' + t('btn_submit') + ':<span>' + game.stats.submits + '</span> | ' + t('btn_hint') + ':<span>' + game.stats.hintsUsed + '/' + game.stats.maxHints + '</span> | ' + t('btn_draw') + ':<span>' + game.stats.draws + '</span>';
   } else { document.getElementById('stats-panel').classList.add('hidden'); }
 
   if (!isSolo) document.getElementById('hint-area').classList.add('hidden');
@@ -673,19 +673,19 @@ function renderOnlineLobby() {
 
   const title = document.createElement('div');
   title.className = 'online-room-title';
-  title.innerHTML = '<span>联网房间</span><strong>' + (game.online.roomCode || '------') + '</strong>';
+  title.innerHTML = '<span data-i18n="lobby_room_title">' + t('lobby_room_title') + '</span><strong>' + (game.online.roomCode || '------') + '</strong>';
   panel.appendChild(title);
 
   const meta = document.createElement('div');
   meta.className = 'online-room-meta';
-  meta.textContent = (game.online.connected ? '已连接' : '离线') + ' · ' + ({ easy: '简单', normal: '普通', hard: '困难' }[game.difficulty] || '简单') + ' · 目标 ' + game.target;
+  meta.textContent = (game.online.connected ? t('lobby_status_connected') : t('lobby_status_offline')) + ' \u00b7 ' + t('diff_badge_' + game.difficulty) + ' \u00b7 Target ' + game.target;
   panel.appendChild(meta);
 
   const list = document.createElement('div');
   list.className = 'online-seat-list';
   var seatHeader = document.createElement('div');
   seatHeader.className = 'online-seat-header';
-  seatHeader.textContent = '玩家列表（' + game.players.length + '/' + (game.online.maxPlayers || 4) + '）';
+  seatHeader.textContent = t('lobby_player_list', {N: game.players.length, max: game.online.maxPlayers || 4});
   list.appendChild(seatHeader);
   game.players.forEach((player, idx) => {
     const row = document.createElement('div');
@@ -694,13 +694,13 @@ function renderOnlineLobby() {
     const left = document.createElement('span');
     left.className = 'online-seat-name';
     left.innerHTML = '<span class="seat-index">P' + (idx + 1) + '</span>' +
-      (player.host ? '<span class="seat-host">' + uiIcon('crown', 'seat-host-icon') + '房主</span>' : '') +
+      (player.host ? '<span class="seat-host">' + uiIcon('crown', 'seat-host-icon') + t('lobby_host_tag') + '</span>' : '') +
       '<span class="seat-player-name">' + escapeHtml(player.name) + '</span>';
     const right = document.createElement('span');
     right.className = player.connected ? 'online-ready' : 'online-offline';
     right.innerHTML = player.connected
-      ? uiIcon(player.ready ? 'check' : 'wait', 'status-inline-icon') + (player.ready ? '已准备' : '未准备')
-      : uiIcon('onlineOff', 'status-inline-icon') + '短线离席';
+      ? uiIcon(player.ready ? 'check' : 'wait', 'status-inline-icon') + (player.ready ? t('lobby_ready') : t('lobby_not_ready'))
+      : uiIcon('onlineOff', 'status-inline-icon') + t('lobby_disconnected');
     row.appendChild(left);
     row.appendChild(right);
     list.appendChild(row);
@@ -710,7 +710,7 @@ function renderOnlineLobby() {
   for (var ei = game.players.length; ei < maxP; ei++) {
     const empty = document.createElement('div');
     empty.className = 'online-seat-row empty-seat';
-    empty.innerHTML = '<span>P' + (ei + 1) + ' · -------</span><span class="online-empty">等待加入</span>';
+    empty.innerHTML = '<span>P' + (ei + 1) + ' \u00b7 -------</span><span class="online-empty">' + t('lobby_waiting') + '</span>';
     list.appendChild(empty);
   }
   panel.appendChild(list);
@@ -722,38 +722,38 @@ function renderOnlineLobby() {
   actions.className = 'online-lobby-actions';
   const ready = document.createElement('button');
   ready.className = 'btn-lobby-primary' + (isReady ? ' btn-ready-active' : '');
-  ready.innerHTML = isReady ? uiIcon('check', 'btn-inline-icon') + '已准备' : '准备';
+  ready.innerHTML = isReady ? uiIcon('check', 'btn-inline-icon') + t('lobby_prepared_btn') : t('lobby_prepare_btn');
   ready.disabled = !game.online.connected;
   ready.onclick = function() {
     var newReady = !(myPlayer && myPlayer.ready);
     sendOnlineAction("ready", { ready: newReady });
-    ready.innerHTML = newReady ? uiIcon('check', 'btn-inline-icon') + '已准备' : '准备';
+    ready.innerHTML = newReady ? uiIcon('check', 'btn-inline-icon') + t('lobby_prepared_btn') : t('lobby_prepare_btn');
     if (newReady) { ready.classList.add('btn-ready-active'); }
     else { ready.classList.remove('btn-ready-active'); }
     if (myPlayer) myPlayer.ready = newReady;
     var rightEls = document.querySelectorAll('.online-seat-row.mine .online-ready');
-    if (rightEls.length) rightEls[0].innerHTML = uiIcon(newReady ? 'check' : 'wait', 'status-inline-icon') + (newReady ? '已准备' : '未准备');
+    if (rightEls.length) rightEls[0].innerHTML = uiIcon(newReady ? 'check' : 'wait', 'status-inline-icon') + (newReady ? t('lobby_ready') : t('lobby_not_ready'));
   };
   actions.appendChild(ready);
   const start = document.createElement('button');
   start.className = 'btn-lobby-primary';
-  start.textContent = '开始对局';
+  start.textContent = t('lobby_start_btn');
   start.disabled = !game.online.connected || !game.online.isHost || game.players.length < 2;
   start.onclick = onlineStartGame;
   actions.appendChild(start);
   const share = document.createElement('button');
   share.className = 'secondary';
-  share.textContent = '复制房间码';
+  share.textContent = t('lobby_copy_code');
   share.onclick = () => {
     if (navigator.clipboard && game.online.roomCode) navigator.clipboard.writeText(game.online.roomCode);
-    showToast('房间码：' + game.online.roomCode, 'submit');
+    showToast(t('lobby_room_code_copied') + game.online.roomCode, 'submit');
   };
   actions.appendChild(share);
   const leave = document.createElement('button');
   leave.className = 'secondary';
-  leave.textContent = '离开房间';
+  leave.textContent = t('lobby_leave_btn');
   leave.onclick = function() {
-    if (confirm('确定要离开房间吗？')) onlineLeaveRoom();
+    if (confirm(t('confirm_leave_room'))) onlineLeaveRoom();
   };
   actions.appendChild(leave);
   panel.appendChild(actions);

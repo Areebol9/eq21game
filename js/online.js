@@ -106,7 +106,7 @@ async function fetchOnlineWithTimeout(url, options, timeoutMs) {
     });
   } catch (error) {
     if (error && error.name === "AbortError") {
-      const timeoutError = new Error("连接联网服务超时，请检查当前网络是否能访问服务地址");
+      const timeoutError = new Error(t('online_http_timeout'));
       timeoutError.code = "online_http_timeout";
       throw timeoutError;
     }
@@ -119,18 +119,18 @@ async function fetchOnlineWithTimeout(url, options, timeoutMs) {
 function openOnlineSetup() {
   document.getElementById("menu-overlay").classList.add("hidden");
   document.getElementById("online-setup-overlay").classList.remove("hidden");
-  updateModeBadge("联网对战");
+  updateModeBadge(t('mode_online'));
   State.set("mode", "online");
   const base = document.getElementById("online-base-url");
   if (base && (!base.value || (getConfiguredOnlineBaseUrl() && !isLocalPage()))) base.value = getDefaultOnlineBaseUrl();
   const urlRow = document.querySelector(".online-url-row");
   if (urlRow) urlRow.style.display = /localhost|127\.0\.0\.1/i.test(base.value) ? "" : "none";
   const name = document.getElementById("online-player-name");
-  if (name && !name.value) name.value = "玩家";
+  if (name && !name.value) name.value = t('player_default');
   const reconnect = loadOnlineSession();
   const btnReconnect = document.getElementById("btn-online-reconnect");
   if (btnReconnect) btnReconnect.disabled = !reconnect;
-  setOnlineStatus(reconnect ? "可重连上次房间 " + reconnect.roomCode : "创建房间后分享房间码或二维码", "info");
+  setOnlineStatus(reconnect ? t('online_reconnect_available') + reconnect.roomCode : t('online_create_hint'), "info");
 }
 
 function closeOnlineSetup() {
@@ -151,9 +151,9 @@ function getSelectedOnlinePlayerCount() {
 
 async function createOnlineRoom() {
   const baseUrl = normalizeOnlineBaseUrl(getOnlineFormValue("online-base-url", ""));
-  const name = getOnlineFormValue("online-player-name", "玩家");
+  const name = getOnlineFormValue("online-player-name", t('player_default'));
   localStorage.setItem(ONLINE_BASE_KEY, baseUrl);
-  setOnlineStatus("正在创建房间...", "info");
+  setOnlineStatus(t('online_creating'), "info");
   try {
     if (typeof fetch !== "function") throw new Error("当前环境不支持 fetch，请使用现代浏览器");
     const response = await fetchOnlineWithTimeout(baseUrl + "/api/rooms", {
@@ -167,7 +167,7 @@ async function createOnlineRoom() {
       })
     }, ONLINE_HTTP_TIMEOUT_MS);
     const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.error || "创建房间失败");
+    if (!response.ok || !data.ok) throw new Error(data.error || t('online_create_failed'));
     const session = {
       baseUrl,
       roomCode: data.roomCode,
@@ -180,31 +180,31 @@ async function createOnlineRoom() {
     connectOnlineRoom(session);
   } catch (error) {
     if (error && error.code === "online_http_timeout") showOnlineServiceUrl();
-    setOnlineStatus(error.message || "创建房间失败", "err");
-    showToast(error.message || "创建房间失败", "error");
+    setOnlineStatus(error.message || t('online_create_failed'), "err");
+    showToast(error.message || t('online_create_failed'), "error");
   }
 }
 
 async function joinOnlineRoom() {
   const baseUrl = normalizeOnlineBaseUrl(getOnlineFormValue("online-base-url", ""));
   const roomCode = getOnlineFormValue("online-room-code", "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const name = getOnlineFormValue("online-player-name", "玩家");
+  const name = getOnlineFormValue("online-player-name", t('player_default'));
   if (!roomCode) {
-    setOnlineStatus("请输入房间码", "err");
+    setOnlineStatus(t('online_no_room_code'), "err");
     return;
   }
   localStorage.setItem(ONLINE_BASE_KEY, baseUrl);
-  setOnlineStatus("正在查询房间...", "info");
+  setOnlineStatus(t('online_querying'), "info");
   try {
     const response = await fetchOnlineWithTimeout(baseUrl + "/api/rooms/" + roomCode, {}, ONLINE_HTTP_TIMEOUT_MS);
     let data;
     try { data = await response.json(); } catch (_) { data = null; }
-    if (!response.ok || !data || !data.ok) throw new Error((data && data.error) || response.statusText || "房间不存在");
+    if (!response.ok || !data || !data.ok) throw new Error((data && data.error) || response.statusText || t('online_room_not_found'));
     connectOnlineRoom({ baseUrl, roomCode, name, wsUrl: data.wsUrl || "" });
   } catch (error) {
     if (error && error.code === "online_http_timeout") showOnlineServiceUrl();
-    setOnlineStatus(error.message || "查询房间失败", "err");
-    showToast(error.message || "查询房间失败", "error");
+    setOnlineStatus(error.message || t('online_query_failed'), "err");
+    showToast(error.message || t('online_query_failed'), "error");
   }
 }
 
@@ -215,7 +215,7 @@ function reconnectOnlineRoom() {
     if (btnReconnect) btnReconnect.disabled = true;
   }
   if (!session) {
-    setOnlineStatus("没有可重连的房间", "err");
+    setOnlineStatus(t('online_reconnect_none'), "err");
     return;
   }
   connectOnlineRoom(session);
@@ -331,7 +331,7 @@ function loadOnlineSession() {
     return {
       baseUrl: last.baseUrl,
       roomCode: last.roomCode,
-      name: last.name || getOnlineFormValue("online-player-name", "玩家"),
+      name: last.name || getOnlineFormValue("online-player-name", t('player_default')),
       playerId: last.playerId || "",
       seatToken: last.seatToken || "",
       wsUrl: last.wsUrl || ""
@@ -379,7 +379,7 @@ function connectOnlineRoom(session) {
     connected: false,
     connecting: true,
     reconnecting: !!(session.playerId && session.seatToken),
-    status: "正在连接房间..."
+    status: t('online_connecting')
   });
   saveOnlineSession({
     baseUrl: game.online.baseUrl,
@@ -389,13 +389,13 @@ function connectOnlineRoom(session) {
     name: session.name || "",
     wsUrl: game.online.wsUrl
   });
-  updateModeBadge("联网对战");
-  setOnlineStatus("正在连接房间 " + session.roomCode + "...", "info");
+  updateModeBadge(t('mode_online'));
+  setOnlineStatus(t('online_connecting_status') + session.roomCode + "...", "info");
   renderAll();
 
   const SocketCtor = typeof WebSocket !== "undefined" ? WebSocket : (window && window.WebSocket);
   if (!SocketCtor) {
-    setOnlineStatus("当前浏览器不支持 WebSocket", "err");
+    setOnlineStatus(t('online_ws_not_supported'), "err");
     return;
   }
   const ws = new SocketCtor(buildOnlineWsUrl(session));
@@ -404,8 +404,8 @@ function connectOnlineRoom(session) {
     if (onlineSocket !== ws || ws.readyState !== 0) return;
     ws.__eq21TimedOut = true;
     game.online.connecting = false;
-    setOnlineStatus("连接超时，请检查手机网络或服务地址是否可访问", "err");
-    showToast("连接超时，可能是手机网络无法访问联网服务", "error");
+    setOnlineStatus(t('online_timeout'), "err");
+    showToast(t('online_timeout_toast'), "error");
     showOnlineServiceUrl();
     try { ws.close(); } catch (e) {}
     renderAll();
@@ -415,12 +415,12 @@ function connectOnlineRoom(session) {
     clearTimeout(connectTimer);
     game.online.connected = true;
     game.online.connecting = false;
-    game.online.status = "已连接";
+    game.online.status = t('online_connected_status');
     onlineReconnectAttempts = 0;
     startHeartbeat();
     ws.send(JSON.stringify({
       type: "join",
-      name: session.name || getOnlineFormValue("online-player-name", "玩家"),
+      name: session.name || getOnlineFormValue("online-player-name", t('player_default')),
       playerId: session.playerId || game.online.playerId || "",
       seatToken: session.seatToken || game.online.seatToken || ""
     }));
@@ -431,7 +431,7 @@ function connectOnlineRoom(session) {
   };
 
   ws.onerror = function() {
-    setOnlineStatus("连接异常，稍后会尝试重连", "err");
+    setOnlineStatus(t('online_ws_error'), "err");
   };
 
   ws.onclose = function(event) {
@@ -446,10 +446,10 @@ function connectOnlineRoom(session) {
       return;
     }
     if (!onlineManualClose && game.mode === "online" && game.online.roomCode) {
-      setOnlineStatus("连接断开，正在尝试重连...", "err");
+      setOnlineStatus(t('online_reconnecting'), "err");
       scheduleOnlineReconnect();
     } else {
-      setOnlineStatus("已断开连接", "info");
+      setOnlineStatus(t('online_disconnected'), "info");
     }
     renderAll();
   };
@@ -459,7 +459,7 @@ function scheduleOnlineReconnect() {
   if (onlineReconnectTimer) clearTimeout(onlineReconnectTimer);
   onlineReconnectAttempts++;
   if (onlineReconnectAttempts > ONLINE_MAX_RECONNECT_ATTEMPTS) {
-    setOnlineStatus("重连失败，请返回菜单重新进入", "err");
+    setOnlineStatus(t('online_reconnect_failed'), "err");
     stopTimer();
     return;
   }
@@ -539,10 +539,10 @@ function handleOnlineMessage(raw) {
       handleOnlineRoomEndedError();
       return;
     }
-    setOnlineStatus(message.error || "操作失败", "err");
-    showToast(message.error || "操作失败", "error");
+    setOnlineStatus(message.error || t('online_misc_failed'), "err");
+    showToast(message.error || t('online_misc_failed'), "error");
   } else if (message.type === "pong") {
-    game.online.status = "在线";
+    game.online.status = t('online_status_online');
   }
 }
 
@@ -580,7 +580,7 @@ function applyOnlineSnapshot(room) {
     rematchNeededCount: room.rematchNeededCount || ((room.players || []).length),
     canRematch: !!room.canRematch,
     lastSnapshotAt: Date.now(),
-    status: "房间 " + room.roomCode + " · " + (room.phase === "lobby" ? "等待开局" : room.phase === "playing" ? "对局中" : "已结束")
+    status: 'Room ' + room.roomCode + ' \u00b7 ' + (room.phase === 'lobby' ? t('online_status_lobby') : room.phase === 'playing' ? t('online_status_playing') : t('online_status_ended'))
   });
   saveOnlineSession({
     baseUrl: game.online.baseUrl || getDefaultOnlineBaseUrl(),
@@ -608,7 +608,7 @@ function applyOnlineSnapshot(room) {
     winningFormula: player.winningFormula || "",
     inputDraft: isNewOnlineRound ? "" : (draftById[player.id] || ""),
     isAi: false,
-    _newCardIdx: player.feedback && player.feedback.startsWith("+牌 →") ? player.hand.length - 1 : undefined
+    _newCardIdx: player.feedback && (player.feedback.indexOf('+') >= 0) ? player.hand.length - 1 : undefined
   })));
 
   syncOnlineEvents(room.events || []);
@@ -625,7 +625,7 @@ function applyOnlineSnapshot(room) {
     if (isNewOnlineRound) {
       onlinePresenceSeqByPlayer = {};
       document.getElementById("result-overlay").classList.add("hidden");
-      showToast("新一局开始", "submit");
+      showToast(t('online_new_round'), "submit");
     }
   }
 
@@ -688,7 +688,7 @@ function handleOnlineRoomEndedError() {
   const roomCode = game.online.roomCode;
   markOnlineRoomClosed(roomCode);
   disconnectOnline(false);
-  const message = "\u8be5\u623f\u95f4\u5df2\u7ed3\u675f\uff0c\u8bf7\u521b\u5efa\u65b0\u623f\u95f4";
+  const message = t('online_room_ended');
   setOnlineStatus(message, "err");
   showToast(message, "error");
   const btnReconnect = document.getElementById("btn-online-reconnect");
@@ -697,7 +697,7 @@ function handleOnlineRoomEndedError() {
 
 function getOnlinePlayerName() {
   const me = game.players.find(player => player.id === game.online.playerId);
-  return me ? me.name : getOnlineFormValue("online-player-name", "玩家");
+  return me ? me.name : getOnlineFormValue("online-player-name", t('player_default'));
 }
 
 function syncOnlineEvents(events) {
@@ -780,14 +780,14 @@ function maybeRecordOnlineResult(room, winnerIdx, resultKey) {
     submits: 0,
     hintsUsed: 0,
     onlineResultKey: resultKey,
-    tags: won ? ["联网获胜"] : []
+    tags: won ? [t('tag_win_online')] : []
   });
   if (saved !== false) setStorageItem(localStorage, getOnlineResultStorageKey(resultKey), String(Date.now()));
 }
 
 function sendOnlineAction(type, payload) {
   if (!onlineSocket || onlineSocket.readyState !== 1) {
-    showToast("还没连上房间", "error");
+    showToast(t('online_not_connected'), "error");
     return false;
   }
   onlineSocket.send(JSON.stringify({ type, payload: payload || {} }));
@@ -836,26 +836,27 @@ function updateOnlineRematchResultUi() {
   const agreed = getMyOnlineRematchVote();
   const agreedCount = game.online.rematchAgreedCount || 0;
   const neededCount = game.online.rematchNeededCount || game.players.length || 0;
-  btn.textContent = agreed ? "取消同意" : "同意再来一局";
+  btn.textContent = agreed ? t('btn_again_cancel') : t('btn_again_agree');
   btn.disabled = !game.online.connected || game.phase !== "ended" || !game.online.canRematch;
   if (!status) return;
   status.className = game.online.canRematch ? "result-rematch-status" : "result-rematch-status warn";
   if (!game.online.canRematch) {
-    status.textContent = "牌库不足，当前房间无法再来一局。";
+    status.textContent = t('rematch_no_rematch');
     return;
   }
   const votes = game.online.rematchVotes || {};
   const waiting = game.players
-    .filter(player => !votes[player.id])
-    .map(player => player.name + (player.connected ? "" : "（离线）"));
-  status.textContent = "已同意 " + agreedCount + "/" + neededCount +
-    (waiting.length ? "，等待：" + waiting.join("、") : "，即将开始。");
+    .filter(function(player){ return !votes[player.id]; })
+    .map(function(player){ return player.name + (player.connected ? "" : " (Offline)"); });
+  status.textContent = waiting.length
+    ? t('rematch_status_waiting', {agree: agreedCount, need: neededCount, names: waiting.join("、")})
+    : t('rematch_status_starting', {agree: agreedCount, need: neededCount});
 }
 
 function onlineToggleRematchVote() {
   if (game.phase !== "ended") return;
   if (!game.online.canRematch) {
-    showToast("牌库不足，无法再来一局", "error");
+    showToast(t('rematch_deck_short'), "error");
     updateOnlineRematchResultUi();
     return;
   }

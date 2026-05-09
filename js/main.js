@@ -82,7 +82,7 @@ function init() {
   document.getElementById('btn-history').onclick = openHistory;
   document.getElementById('btn-history-close').onclick = closeHistory;
   document.getElementById('btn-history-clear').onclick = () => {
-    if (confirm('确定要清空所有对局历史吗？此操作不可恢复！') && clearHistory()) {
+    if (confirm(t('confirm_clear_history')) && clearHistory()) {
       openHistory();
     }
   };
@@ -161,7 +161,7 @@ function copyShareLink() {
   var url = getShareUrl();
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(function() {
-      showToast('链接已复制！', 'submit');
+      showToast(t('share_copied'), 'submit');
     }).catch(function() {
       fallbackCopy(url);
     });
@@ -180,17 +180,17 @@ function fallbackCopy(text) {
   ta.select();
   try {
     document.execCommand('copy');
-    showToast('链接已复制！', 'submit');
+    showToast(t('share_copied'), 'submit');
   } catch (e) {
-    showToast('复制失败，请手动复制链接', 'error');
+    showToast(t('share_copy_failed'), 'error');
   }
   document.body.removeChild(ta);
 }
 
 function nativeShare() {
   var shareData = {
-    title: 'Equation 21 - 算式21点',
-    text: '在线数学纸牌游戏，用扑克牌和运算符组成等于21的算式！',
+    title: t('share_title'),
+    text: t('share_text'),
     url: getShareUrl()
   };
   if (navigator.share) {
@@ -218,10 +218,10 @@ function submitFeedback() {
   var textarea = document.getElementById('feedback-text');
   var text = textarea ? textarea.value.trim() : '';
   if (!text) {
-    showToast('请填写反馈内容', 'error');
+    showToast(t('feedback_empty_error'), 'error');
     return;
   }
-  var issueUrl = getFeedbackGhUrl() + '/issues/new?title=' + encodeURIComponent('用户反馈') + '&body=' + encodeURIComponent(text + '\n\n---\n提交自: ' + getShareUrl());
+  var issueUrl = getFeedbackGhUrl() + '/issues/new?title=' + encodeURIComponent(t('feedback_issue_title')) + '&body=' + encodeURIComponent(text + '\n\n---\n' + t('feedback_send_to') + getShareUrl());
   window.open(issueUrl, '_blank', 'noopener');
   closeFeedback();
 }

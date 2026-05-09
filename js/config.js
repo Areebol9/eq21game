@@ -78,20 +78,20 @@ const OPERATORS = {
   '-': { sym: '-',  prec: 1, arity: 2, fn: (a, b) => a - b },
   '*': { sym: '*',  prec: 2, arity: 2, fn: (a, b) => a * b },
   '/': { sym: '/',  prec: 2, arity: 2, fn: (a, b) => {
-    if (b === 0) throw new Error('除数不能为零');
+    if (b === 0) throw new Error(t('ops_div_zero'));
     return a / b;
   }},
   '^': { sym: '^',  prec: 3, arity: 2, fn: (a, b) => {
-    if (Math.abs(b) > 100 || (a === 0 && b <= 0)) throw new Error('幂运算参数不合法');
+    if (Math.abs(b) > 100 || (a === 0 && b <= 0)) throw new Error(t('ops_pow_invalid'));
     return Math.pow(a, b);
   }},
   '!': { sym: '!',  prec: 4, arity: 1, fn: (v) => {
-    if (!Number.isInteger(v) || v < 0 || v > 20) throw new Error('阶乘仅支持0~20的整数');
+    if (!Number.isInteger(v) || v < 0 || v > 20) throw new Error(t('ops_fact_range'));
     let f = 1; for (let k = 2; k <= v; k++) f *= k;
     return f;
   }},
-  '√': { sym: '√',  prec: 4, arity: 1, fn: (v) => {
-    if (v < 0) throw new Error('不能对负数开根号');
+  '\u221A': { sym: '\u221A',  prec: 4, arity: 1, fn: (v) => {
+    if (v < 0) throw new Error(t('ops_sqrt_neg_err'));
     return Math.sqrt(v);
   }},
 };
@@ -229,7 +229,7 @@ function updateSoundButton() {
   if (btn) {
     const icon = game.soundEnabled ? 'volume' : 'volumeOff';
     btn.innerHTML = '<span class="btn-icon">' + (typeof svgIcon === 'function' ? svgIcon(icon) : (game.soundEnabled ? '音' : '静')) + '</span>';
-    btn.title = game.soundEnabled ? '关闭音效' : '开启音效';
+    btn.title = game.soundEnabled ? t('sound_on_title') : t('sound_off_title');
     btn.setAttribute('aria-label', btn.title);
   }
 }

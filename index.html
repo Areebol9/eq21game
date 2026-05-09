@@ -14,6 +14,8 @@
 <meta property="og:description" content="用扑克牌数字和运算符组成等于 21 的算式。支持单人练习、围桌模式、AI 对战和联网对战。">
 <meta property="og:url" content="https://eq21game.com/">
 <meta property="og:image" content="https://eq21game.com/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="算式21点 Equation 21 - 在线数学纸牌游戏">
 <meta name="twitter:description" content="在线 21 点算式游戏，用纸牌数字和运算符凑出 21。">
@@ -23,7 +25,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-<link rel="apple-touch-icon" href="assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48.png">
+<link rel="icon" type="image/png" sizes="96x96" href="assets/favicon-96.png">
+<link rel="apple-touch-icon" href="assets/favicon-192.png">
 <link rel="stylesheet" href="style.css">
 <script type="application/ld+json">
 {
@@ -61,14 +65,14 @@
     <div class="status-chips">
       <span id="diff-badge" class="diff-badge diff-easy">简单</span>
       <span id="mode-badge" class="mode-badge">本地多人</span>
-      <span class="status-chip"><span class="chip-icon" data-icon="suitSpade"></span>牌库:<span id="deck-count">40</span></span>
+      <span class="status-chip"><span class="chip-icon" data-icon="suitSpade"></span><span data-i18n="header_deck_label">牌库:</span><span id="deck-count">40</span></span>
       <span class="status-chip"><span class="chip-icon" data-icon="wait"></span><span id="timer">00:00</span></span>
     </div>
     <div class="header-actions">
-      <button id="btn-rules" class="header-action" onclick="showRules()" title="游戏规则" aria-label="游戏规则"><span class="btn-icon" data-icon="rules"></span><span class="btn-text">规则</span></button>
+      <button id="btn-rules" class="header-action" onclick="showRules()" title="游戏规则" aria-label="游戏规则"><span class="btn-icon" data-icon="rules"></span><span class="btn-text" data-i18n="header_rules_btn">规则</span></button>
       <button id="btn-sound" class="header-action" title="音效开关" aria-label="音效开关"><span class="btn-icon" data-icon="volume"></span></button>
       <button id="btn-history" class="header-action" title="对局历史" aria-label="对局历史"><span class="btn-icon" data-icon="history"></span></button>
-      <button id="btn-back" class="header-action" onclick="goToMenu()" title="返回" aria-label="返回"><span class="btn-icon" data-icon="arrowLeft"></span><span class="btn-text btn-back-text">返回</span></button>
+      <button id="btn-back" class="header-action" onclick="goToMenu()" title="返回" aria-label="返回"><span class="btn-icon" data-icon="arrowLeft"></span><span class="btn-text btn-back-text" data-i18n="header_back_btn">返回</span></button>
     </div>
   </div>
 </div>
@@ -82,15 +86,15 @@
   <div id="players-area"></div>
   <div id="hint-area" class="hidden"></div>
   <div id="tabletop-center" class="hidden">
-    <div class="tc-stat"><div class="tc-val" id="tc-timer">00:00</div><div class="tc-label">用时</div></div>
-    <div class="tc-stat"><div class="tc-val" id="tc-deck">40</div><div class="tc-label">牌库</div></div>
-    <div class="tc-stat"><div class="tc-val" style="color:var(--gold)">21</div><div class="tc-label">目标</div></div>
+    <div class="tc-stat"><div class="tc-val" id="tc-timer">00:00</div><div class="tc-label" data-i18n="tc_time_label">用时</div></div>
+    <div class="tc-stat"><div class="tc-val" id="tc-deck">40</div><div class="tc-label" data-i18n="tc_deck_label">牌库</div></div>
+    <div class="tc-stat"><div class="tc-val" style="color:var(--gold)">21</div><div class="tc-label" data-i18n="tc_target_label">目标</div></div>
     <div class="tc-event" id="tc-event"></div>
   </div>
   <div id="online-chat-bar" class="hidden"></div>
   <section id="log-shell" class="log-shell">
     <button id="btn-log-toggle" class="log-toggle" type="button" aria-expanded="true" aria-controls="log-panel" title="展开或折叠日志" aria-label="展开或折叠日志">
-      <span class="log-toggle-title">日志</span>
+      <span class="log-toggle-title" data-i18n="log_title">日志</span>
       <span id="log-toggle-count" class="log-toggle-count">0</span>
       <span class="log-toggle-icon">▾</span>
     </button>
@@ -99,7 +103,7 @@
 </div>
 
 <!-- 底部信息条 -->
-<div id="footer-bar"><span class="icon" data-icon="card"></span> 准备开始游戏...</div>
+<div id="footer-bar"><span class="icon" data-icon="card"></span><span data-i18n="footer_ready">准备开始游戏...</span></div>
 
 <!-- 胜利特效层 -->
 <div id="victory-overlay" class="hidden"></div>
@@ -201,9 +205,9 @@
     </div>
 
     <div class="menu-share">
-      <button class="menu-link" id="btn-native-share" onclick="nativeShare()" aria-label="分享"><span class="menu-icon" data-icon="share"></span><span class="menu-label">分享</span></button>
+      <button class="menu-link" id="btn-native-share" onclick="nativeShare()" aria-label="分享"><span class="menu-icon" data-icon="share"></span><span class="menu-label" data-i18n="share_btn">分享</span></button>
       <span class="menu-separator">·</span>
-      <button class="menu-link" onclick="openFeedback()" aria-label="反馈"><span class="menu-icon" data-icon="check"></span><span class="menu-label">反馈</span></button>
+      <button class="menu-link" onclick="openFeedback()" aria-label="反馈"><span class="menu-icon" data-icon="check"></span><span class="menu-label" data-i18n="feedback_btn">反馈</span></button>
     </div>
   </div>
 </div>
@@ -224,7 +228,7 @@
 
     <p class="rule-section-title"><span class="inline-icon" data-icon="normal"></span><span data-i18n="rules_diff_title">难度与运算符</span></p>
     <table class="rules-table">
-      <tr><th>难度</th><th>牌面</th><th>可用运算符</th><th>适合</th></tr>
+      <tr><th data-i18n="rules_col_difficulty">难度</th><th data-i18n="rules_col_cards">牌面</th><th data-i18n="rules_col_ops">可用运算符</th><th data-i18n="rules_col_for">适合</th></tr>
       <tr><td data-i18n="diff_easy">简单</td><td>A~10</td><td>+  -  *  /  ( )</td><td data-i18n="diff_easy_for">新手入门</td></tr>
       <tr><td data-i18n="diff_normal">普通</td><td>A~K</td><td>+  -  *  /  ^  √  ( )</td><td data-i18n="diff_normal_for">适合熟练玩家</td></tr>
       <tr><td data-i18n="diff_hard">困难</td><td>A~K</td><td>+  -  *  /  ^  √  !  ( )</td><td data-i18n="diff_hard_for">适合数学高手</td></tr>
@@ -337,13 +341,13 @@
 <!-- 反馈弹窗 -->
 <div id="feedback-overlay" class="overlay hidden">
   <div class="dialog" style="max-width:440px">
-    <h2 class="dialog-title"><span class="inline-icon" data-icon="check"></span>反馈建议</h2>
-    <textarea id="feedback-text" class="feedback-textarea" rows="5" placeholder="请输入你的建议、想法或遇到的 bug..." aria-label="反馈内容"></textarea>
+    <h2 class="dialog-title"><span class="inline-icon" data-icon="check"></span><span data-i18n="feedback_title">反馈建议</span></h2>
+    <textarea id="feedback-text" class="feedback-textarea" rows="5" data-i18n-placeholder="feedback_placeholder" placeholder="请输入你的建议、想法或遇到的 bug..." aria-label="反馈内容"></textarea>
     <div class="feedback-actions">
-      <button id="btn-feedback-submit" onclick="submitFeedback()" aria-label="提交反馈">提交至 GitHub Issues</button>
-      <button class="secondary" onclick="closeFeedback()" aria-label="取消">取消</button>
+      <button id="btn-feedback-submit" onclick="submitFeedback()" aria-label="提交反馈"><span data-i18n="feedback_submit_btn">提交至 GitHub Issues</span></button>
+      <button class="secondary" onclick="closeFeedback()" aria-label="取消"><span data-i18n="feedback_cancel_btn">取消</span></button>
     </div>
-    <p class="feedback-hint">提交后将打开 GitHub Issues 页面，请确认后点 "Submit new issue"</p>
+    <p class="feedback-hint" data-i18n="feedback_hint">提交后将打开 GitHub Issues 页面，请确认后点 "Submit new issue"</p>
   </div>
 </div>
 
@@ -366,11 +370,11 @@
 <!-- 历史面板（侧边滑出） -->
 <div id="history-panel" class="history-panel hidden">
   <div class="history-header">
-    <span class="history-title"><span class="inline-icon" data-icon="history"></span>对局历史</span>
+    <span class="history-title"><span class="inline-icon" data-icon="history"></span><span data-i18n="history_title">对局历史</span></span>
     <div class="history-header-actions">
-      <button id="btn-history-clear" class="btn-sm" title="清空历史" aria-label="清空历史"><span class="inline-icon" data-icon="trash"></span>清空</button>
+      <button id="btn-history-clear" class="btn-sm" title="清空历史" aria-label="清空历史"><span class="inline-icon" data-icon="trash"></span><span data-i18n="history_clear_btn">清空</span></button>
       <span id="history-streak" class="history-streak"></span>
-      <button id="btn-history-close" class="btn-close-panel" aria-label="关闭历史面板"><span class="inline-icon" data-icon="close"></span>关闭</button>
+      <button id="btn-history-close" class="btn-close-panel" aria-label="关闭历史面板"><span class="inline-icon" data-icon="close"></span><span data-i18n="history_close_btn">关闭</span></button>
     </div>
   </div>
   <div class="history-body">
@@ -379,10 +383,10 @@
     <div class="history-stats" id="history-stats-solo" style="display:none"></div>
     <div class="history-best" id="history-best"></div>
     <div class="history-diff-filter" id="history-diff-filter" style="display:none">
-      <button class="diff-tag active" data-diff="all">全部</button>
-      <button class="diff-tag" data-diff="easy">简单</button>
-      <button class="diff-tag" data-diff="normal">普通</button>
-      <button class="diff-tag" data-diff="hard">困难</button>
+      <button class="diff-tag active" data-diff="all" data-i18n="history_filter_all">全部</button>
+      <button class="diff-tag" data-diff="easy" data-i18n="history_diff_easy">简单</button>
+      <button class="diff-tag" data-diff="normal" data-i18n="history_diff_normal">普通</button>
+      <button class="diff-tag" data-diff="hard" data-i18n="history_diff_hard">困难</button>
     </div>
     <div class="history-records" id="history-records"></div>
   </div>

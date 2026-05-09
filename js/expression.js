@@ -8,7 +8,7 @@ function tokenize(expr) {
   function pushFaceToken(value, raw) {
     i++;
     if (i < s.length && s[i] === '!') {
-      if (!hasFactorial()) throw new Error('阶乘仅在困难模式可用');
+      if (!hasFactorial()) throw new Error(t('ops_fact_easy'));
       i++;
       let f = 1; for (let k = 2; k <= value; k++) f *= k;
       tokens.push({ type: TOK_NUM, value: f, raw: raw + '!' });
@@ -38,18 +38,18 @@ function tokenize(expr) {
         else if (nc === 'J' || nc === 'j') { tokens.push({ type: TOK_NUM, value: Math.sqrt(11), raw: '\u221AJ' }); i++; }
         else if (nc === 'Q' || nc === 'q') { tokens.push({ type: TOK_NUM, value: Math.sqrt(12), raw: '\u221AQ' }); i++; }
         else if (nc === 'K' || nc === 'k') { tokens.push({ type: TOK_NUM, value: Math.sqrt(13), raw: '\u221AK' }); i++; }
-        else throw new Error('√ 后面需要数字或括号');
+        else throw new Error(t('ops_sqrt_need'));
       }
-      else throw new Error('√ 后面需要数字或括号');
+      else throw new Error(t('ops_sqrt_need'));
       continue;
     }
     if (ch === 's' && s.substr(i, 5).toLowerCase() === 'sqrt(') { tokens.push({ type: TOK_SQRT, value: 'sqrt', raw: 'sqrt' }); tokens.push({ type: TOK_LP, value: '(', raw: '(' }); i += 5; continue; }
     if (ch >= '0' && ch <= '9') {
       let num = ''; while (i < s.length && s[i] >= '0' && s[i] <= '9') { num += s[i]; i++; }
       if (i < s.length && s[i] === '!') {
-        if (!hasFactorial()) throw new Error('阶乘仅在困难模式可用');
+        if (!hasFactorial()) throw new Error(t('ops_fact_easy'));
         i++; let n = Number(num);
-        if (!Number.isInteger(n) || n < 0 || n > 20) throw new Error('阶乘仅支持0~20的整数');
+        if (!Number.isInteger(n) || n < 0 || n > 20) throw new Error(t('ops_fact_range'));
         let f = 1; for (let k = 2; k <= n; k++) f *= k;
         tokens.push({ type: TOK_NUM, value: f, raw: num + '!' });
       } else { tokens.push({ type: TOK_NUM, value: Number(num), raw: num }); }
@@ -59,8 +59,8 @@ function tokenize(expr) {
     if ('+-*/'.includes(ch)) {
       if (ch === '-' && canStartNegativeNumber()) {
         i++; let num = ''; while (i < s.length && s[i] >= '0' && s[i] <= '9') { num += s[i]; i++; }
-        if (!num) throw new Error('负号后需要数字');
-        if (i < s.length && s[i] === '!') throw new Error('阶乘仅支持非负整数');
+        if (!num) throw new Error(t('ops_neg_need'));
+        if (i < s.length && s[i] === '!') throw new Error(t('ops_fact_nonneg'));
         tokens.push({ type: TOK_NUM, value: -Number(num), raw: '-' + num });
       } else { tokens.push({ type: TOK_OP, value: ch, raw: ch }); i++; }
       continue;
@@ -68,11 +68,11 @@ function tokenize(expr) {
     if (ch === '(') { tokens.push({ type: TOK_LP, value: '(', raw: '(' }); i++; continue; }
     if (ch === ')') { tokens.push({ type: TOK_RP, value: ')', raw: ')' }); i++;
       if (i < s.length && s[i] === '!') {
-        if (!hasFactorial()) throw new Error('阶乘仅在困难模式可用');
+        if (!hasFactorial()) throw new Error(t('ops_fact_easy'));
         tokens.push({ type: TOK_OP, value: '!', raw: '!' }); i++;
       }
       continue; }
-    throw new Error('非法字符: \'' + ch + '\'');
+    throw new Error(t('ops_illegal_char', {ch: ch}));
   }
   return tokens;
 }
@@ -93,13 +93,13 @@ function toRPN(tokens) {
     } else if (t.type === TOK_LP) { st.push(t); }
     else if (t.type === TOK_RP) {
       while (st.length > 0 && st[st.length - 1].type !== TOK_LP) out.push(st.pop());
-      if (!st.length) throw new Error('括号不匹配');
+      if (!st.length) throw new Error(t('ops_paren_mismatch'));
       st.pop();
     }
   }
   while (st.length > 0) {
     const top = st.pop();
-    if (top.type === TOK_LP || top.type === TOK_RP) throw new Error('括号不匹配');
+    if (top.type === TOK_LP || top.type === TOK_RP) throw new Error(t('ops_paren_mismatch'));
     out.push(top);
   }
   return out;
@@ -110,26 +110,26 @@ function evalRPN(rpn) {
   for (const t of rpn) {
     if (t.type === TOK_NUM) { st.push(t.value); }
     else if (t.type === TOK_SQRT) {
-      if (st.length < 1) throw new Error('√ 需要操作数');
-      const v = st.pop(); if (v < 0) throw new Error('不能对负数开根号');
+      if (st.length < 1) throw new Error(t('ops_sqrt_operand'));
+      const v = st.pop(); if (v < 0) throw new Error(t('ops_sqrt_neg_err'));
       st.push(Math.sqrt(v));
     } else if (t.type === TOK_OP) {
       const op = OPERATORS[t.value];
-      if (!op) throw new Error('未知运算符');
+      if (!op) throw new Error(t('ops_unknown'));
       if (op.arity === 1) {
-        if (st.length < 1) throw new Error('表达式不完整');
+        if (st.length < 1) throw new Error(t('ops_expr_incomplete'));
         const v = st.pop();
         st.push(op.fn(v));
       } else {
-        if (st.length < 2) throw new Error('表达式不完整');
+        if (st.length < 2) throw new Error(t('ops_expr_incomplete'));
         const b = st.pop(), a = st.pop();
         const r = op.fn(a, b);
-        if (!isFinite(r) || isNaN(r)) throw new Error('计算结果溢出');
+        if (!isFinite(r) || isNaN(r)) throw new Error(t('ops_result_overflow'));
         st.push(r);
       }
     }
   }
-  if (st.length !== 1) throw new Error('表达式不完整');
+  if (st.length !== 1) throw new Error(t('ops_expr_incomplete'));
   return st[0];
 }
 
@@ -206,17 +206,17 @@ function rateSolution(expr, difficulty, handLength) {
   const tags = [];
   let score = 0;
   if (ops.hasMul || ops.hasDiv) score += 30;
-  if (ops.hasPow) { score += 180; tags.push('🔮幂指神算'); }
-  if (ops.hasSqrt) { score += 200; tags.push('📐开方妙用'); }
-  if (ops.hasFact) { score += 300; tags.push('💥阶乘狂人'); }
-  if (handLength >= 5) { score += 80; tags.push('五牌逆转'); }
+  if (ops.hasPow) { score += 180; tags.push('\uD83D\uDD2E' + t('score_pow')); }
+  if (ops.hasSqrt) { score += 200; tags.push('\uD83D\uDCD0' + t('score_sqrt')); }
+  if (ops.hasFact) { score += 300; tags.push('\uD83D\uDCA5' + t('score_fact')); }
+  if (handLength >= 5) { score += 80; tags.push('Five-Card Reverse'); }
   if (difficulty === 'normal' && (ops.hasPow || ops.hasSqrt)) score += 80;
   if (difficulty === 'hard' && ops.hasFact) score += 100;
   if (ops.hasDiv && /\/[23456789JQK)]/.test(expr)) score += 40;
   if (/\b20\b|\b24\b|\b7\*3\b|\b3\*7\b/.test(expr)) score += 60;
-  if (score >= 420) tags.push('妙手天成');
-  else if (score >= 260) tags.push('✨炫技解法');
-  else if (score >= 160) tags.push('奇思妙算');
+  if (score >= 420) tags.push('Perfect Genius');
+  else if (score >= 260) tags.push('\u2728Flashy Solve');
+  else if (score >= 160) tags.push('Clever Math');
   return { score, tags, ops, complexity: ops.opCount + Math.floor(String(expr || '').length / 8) };
 }
 

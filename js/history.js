@@ -23,7 +23,7 @@ function saveHistory(data) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     return true;
   } catch (e) {
-    showToast('历史记录保存失败（存储空间不足）', 'error');
+    showToast(t('history_save_failed'), 'error');
     return false;
   }
 }
@@ -75,25 +75,25 @@ function calculateScore(p, expr, handLength, submits, timeSec) {
 
   // 底分
   total += 500;
-  breakdown.push({ label: '获胜底分', score: 500 });
+  breakdown.push({ label: t('score_base'), score: 500 });
 
   // 运算符加分
   const ops = detectOps(expr);
   if (ops.hasMul || ops.hasDiv) {
     total += 50;
-    breakdown.push({ label: '乘除巧算', score: 50 });
+    breakdown.push({ label: t('score_muldiv'), score: 50 });
   }
   if (ops.hasPow) {
     total += 150;
-    breakdown.push({ label: '幂指神算', score: 150 });
+    breakdown.push({ label: t('score_pow'), score: 150 });
   }
   if (ops.hasSqrt) {
     total += 200;
-    breakdown.push({ label: '开方妙用', score: 200 });
+    breakdown.push({ label: t('score_sqrt'), score: 200 });
   }
   if (ops.hasFact) {
     total += 300;
-    breakdown.push({ label: '阶乘狂人', score: 300 });
+    breakdown.push({ label: t('score_fact'), score: 300 });
   }
 
   if (typeof rateSolution === 'function') {
@@ -107,27 +107,27 @@ function calculateScore(p, expr, handLength, submits, timeSec) {
     if (rating.score >= 160) {
       const coolBonus = Math.min(500, Math.round(rating.score / 2));
       total += coolBonus;
-      breakdown.push({ label: '妙解加分', score: coolBonus });
+      breakdown.push({ label: t('score_cool'), score: coolBonus });
     }
   }
 
   // 成就加分
   if (handLength <= 3) {
     total += 150;
-    breakdown.push({ label: '三牌封喉', score: 150 });
+    breakdown.push({ label: t('score_3cards'), score: 150 });
   }
 
   if (submits === 1) {
     total += 200;
-    breakdown.push({ label: '一击必杀', score: 200 });
+    breakdown.push({ label: t('score_oneshot'), score: 200 });
   }
 
   if (timeSec <= 15) {
     total += 200;
-    breakdown.push({ label: '闪电心算', score: 200 });
+    breakdown.push({ label: t('score_lightning'), score: 200 });
   } else if (timeSec <= 30) {
     total += 100;
-    breakdown.push({ label: '速算达人', score: 100 });
+    breakdown.push({ label: t('score_speed'), score: 100 });
   }
 
   // 连胜加分（动态计算，含当前局）
@@ -136,7 +136,7 @@ function calculateScore(p, expr, handLength, submits, timeSec) {
   if (streak >= 2) {
     const streakBonus = 100 * streak;
     total += streakBonus;
-    breakdown.push({ label: streak + '连胜', score: streakBonus });
+    breakdown.push({ label: t('score_streak', {N: streak}), score: streakBonus });
   }
 
   return { total, breakdown, solutionRating };
@@ -145,23 +145,23 @@ function calculateScore(p, expr, handLength, submits, timeSec) {
 // ==================== 标签生成 ====================
 function getTags(formula, handLength, submits, timeSec, streak, difficulty) {
   const tags = [];
-  if (handLength <= 3) tags.push('\u26A1\u4E09\u724C\u5C01\u5589');
-  if (handLength >= 5) tags.push('\uD83C\uDCCF\u4E94\u724C\u9006\u8F6C');
-  if (submits === 1) tags.push('\uD83C\uDFAF\u4E00\u51FB\u5FC5\u6740');
-  if (timeSec <= 15) tags.push('\u26A1\u95EA\u7535\u5FC3\u7B97');
-  else if (timeSec <= 30) tags.push('\uD83D\uDCA8\u901F\u7B97\u8FBE\u4EBA');
+  if (handLength <= 3) tags.push(t('tag_3cards'));
+  if (handLength >= 5) tags.push(t('tag_5cards'));
+  if (submits === 1) tags.push(t('tag_oneshot'));
+  if (timeSec <= 15) tags.push(t('tag_lightning'));
+  else if (timeSec <= 30) tags.push(t('tag_speed'));
   const ops = detectOps(formula);
-  if (ops.hasMul || ops.hasDiv) tags.push('\uD83D\uDD22\u4E58\u9664\u5DE7\u7B97');
-  if (ops.hasPow) tags.push('\uD83D\uDD2E\u5E42\u6307\u795E\u7B97');
-  if (ops.hasSqrt) tags.push('\uD83D\uDCD0\u5F00\u65B9\u5999\u7528');
-  if (ops.hasFact) tags.push('\uD83D\uDCA5\u9636\u4E58\u72C2\u4EBA');
+  if (ops.hasMul || ops.hasDiv) tags.push(t('tag_muldiv'));
+  if (ops.hasPow) tags.push(t('tag_pow'));
+  if (ops.hasSqrt) tags.push(t('tag_sqrt'));
+  if (ops.hasFact) tags.push(t('tag_fact'));
   if (typeof rateSolution === 'function') {
     const rating = rateSolution(formula, difficulty, handLength);
     for (const tag of rating.tags) {
       if (!tags.includes(tag)) tags.push(tag);
     }
   }
-  if (streak >= 3) tags.push('\uD83D\uDD25' + streak + '\u8FDE\u80DC');
+  if (streak >= 3) tags.push(t('tag_streak', {N: streak}));
   return tags;
 }
 
@@ -179,7 +179,7 @@ function addRecord(record) {
 function clearHistory() {
   if (!saveHistory({ version: STORAGE_VERSION, records: [] })) return false;
   renderHistoryPanel();
-  showToast('历史记录已清空', 'info');
+  showToast(t('history_cleared'), 'info');
   return true;
 }
 
@@ -218,7 +218,7 @@ function formatHistoryTime(sec) {
   if (sec == null || isNaN(sec)) return '--';
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
-  return m > 0 ? m + '分' + s + '秒' : s + '秒';
+  return (m > 0 ? t('history_time_min', {N: m}) + t('history_time_sec', {N: s}) : t('history_time_sec', {N: s}));
 }
 
 function formatDate(ts) {
@@ -229,8 +229,10 @@ function formatDate(ts) {
 }
 
 // ==================== UI 渲染 ====================
-// mode 标签映射
-var MODE_LABELS = { solo: '\uD83C\uDFCB\uFE0F\u8BAD\u7EC3', ai: '\uD83C\uDFAFAI\u5BF9\u6218', local: '\uD83D\uDC65\u672C\u5730\u591A\u4EBA', online: '\uD83C\uDF10\u8054\u7F51\u5BF9\u6218' };
+// mode 标签映射（运行时通过 t() 获取）
+function getModeLabel(mode) {
+  return t('history_mode_' + mode);
+}
 var _historyDiff = 'all';
 
 function renderHistoryPanel() {
@@ -251,10 +253,10 @@ function renderHistoryPanel() {
   const statsEl = document.getElementById('history-stats');
   if (statsEl) {
     statsEl.innerHTML =
-      '<div class="history-stat-card"><div class="stat-val">' + stats.totalGames + '</div><div class="stat-label">竞技局</div></div>' +
-      '<div class="history-stat-card"><div class="stat-val">' + stats.winRate + '%</div><div class="stat-label">胜率</div></div>' +
-      '<div class="history-stat-card"><div class="stat-val">⭐' + stats.highestScore + '</div><div class="stat-label">最高</div></div>' +
-      '<div class="history-stat-card"><div class="stat-val">⚡' + formatHistoryTime(stats.fastestSec) + '</div><div class="stat-label">最快</div></div>';
+      '<div class="history-stat-card"><div class="stat-val">' + stats.totalGames + '</div><div class="stat-label">' + t('history_stat_games') + '</div></div>' +
+      '<div class="history-stat-card"><div class="stat-val">' + stats.winRate + '%</div><div class="stat-label">' + t('history_stat_winrate') + '</div></div>' +
+      '<div class="history-stat-card"><div class="stat-val">\u2b50' + stats.highestScore + '</div><div class="stat-label">' + t('history_stat_highest') + '</div></div>' +
+      '<div class="history-stat-card"><div class="stat-val">\u26a1' + formatHistoryTime(stats.fastestSec) + '</div><div class="stat-label">' + t('history_stat_fastest') + '</div></div>';
   }
 
   // 单人训练统计
@@ -263,10 +265,10 @@ function renderHistoryPanel() {
     const soloRecords = records.filter(function(r) { return r.mode === 'solo'; });
     if (soloRecords.length > 0) {
       const sStats = getStats(soloRecords);
-      soloStatsEl.innerHTML = '<div class="history-stats-label">📋 单人训练</div>' +
-        '<div class="history-stat-card"><div class="stat-val">' + sStats.totalGames + '</div><div class="stat-label">训练局</div></div>' +
-        '<div class="history-stat-card"><div class="stat-val">⭐' + sStats.highestScore + '</div><div class="stat-label">最高</div></div>' +
-        '<div class="history-stat-card"><div class="stat-val">⚡' + formatHistoryTime(sStats.fastestSec) + '</div><div class="stat-label">最快</div></div>';
+      soloStatsEl.innerHTML = '<div class="history-stats-label">\uD83D\uDCCB ' + t('history_solo_label') + '</div>' +
+        '<div class="history-stat-card"><div class="stat-val">' + sStats.totalGames + '</div><div class="stat-label">' + t('history_stat_solo_games') + '</div></div>' +
+        '<div class="history-stat-card"><div class="stat-val">\u2b50' + sStats.highestScore + '</div><div class="stat-label">' + t('history_stat_highest') + '</div></div>' +
+        '<div class="history-stat-card"><div class="stat-val">\u26a1' + formatHistoryTime(sStats.fastestSec) + '</div><div class="stat-label">' + t('history_stat_fastest') + '</div></div>';
       soloStatsEl.style.display = '';
     } else {
       soloStatsEl.style.display = 'none';
@@ -275,15 +277,15 @@ function renderHistoryPanel() {
 
   // 连胜显示
   const streakEl = document.getElementById('history-streak');
-  if (streakEl) streakEl.textContent = '连胜: ' + currentStreak;
+  if (streakEl) streakEl.textContent = t('history_streak_label') + currentStreak;
 
   // 最漂亮解法
   const bestEl = document.getElementById('history-best');
   if (bestEl && best) {
     const bestTags = best.tags || [];
-    var bestHtml = '<div class="best-title">' + (typeof svgIcon === 'function' ? svgIcon('trophy', 'best-title-icon') : '') + ' 最漂亮解法</div>';
+    var bestHtml = '<div class="best-title">' + (typeof svgIcon === 'function' ? svgIcon('trophy', 'best-title-icon') : '') + ' ' + t('history_best_title') + '</div>';
     bestHtml += '<div class="best-name">' + hEscape(best.player) + '</div>';
-    bestHtml += '<div class="best-score">' + best.score + '分</div>';
+    bestHtml += '<div class="best-score">' + best.score + 'pts</div>';
     bestHtml += '<div class="best-time">' + formatHistoryTime(best.timeSec) + '</div>';
     bestHtml += '<div class="best-hand">' + (best.hand || []).map(function(v) { return cardFace(v); }).join(' ') + '</div>';
     bestHtml += '<div class="best-formula">' + hEscape(best.formula || '') + '</div>';
@@ -292,9 +294,9 @@ function renderHistoryPanel() {
       var srTags = sr.tags || [];
       var levelTag = '';
       for (var t = 0; t < srTags.length; t++) {
-        if (srTags[t].indexOf('妙手天成') >= 0) levelTag = srTags[t];
-        else if (!levelTag && srTags[t].indexOf('炫技解法') >= 0) levelTag = srTags[t];
-        else if (!levelTag && srTags[t].indexOf('奇思妙算') >= 0) levelTag = srTags[t];
+        if (srTags[t].indexOf('Perfect Genius') >= 0) levelTag = srTags[t];
+        else if (!levelTag && srTags[t].indexOf('Flashy Solve') >= 0) levelTag = srTags[t];
+        else if (!levelTag && srTags[t].indexOf('Clever Math') >= 0) levelTag = srTags[t];
       }
       if (levelTag) bestHtml += '<div class="best-rating">' + levelTag + ' · ' + sr.score + '</div>';
     }
@@ -307,7 +309,7 @@ function renderHistoryPanel() {
     }
     bestEl.innerHTML = bestHtml;
   } else if (bestEl) {
-    bestEl.innerHTML = '<div class="best-title">' + (typeof svgIcon === 'function' ? svgIcon('trophy', 'best-title-icon') : '') + ' 最漂亮解法</div><div class="history-empty">暂无竞技记录</div>';
+    bestEl.innerHTML = '<div class="best-title">' + (typeof svgIcon === 'function' ? svgIcon('trophy', 'best-title-icon') : '') + ' ' + t('history_best_title') + '</div><div class="history-empty">' + t('history_empty_comp') + '</div>';
   }
 
   // 难度筛选
@@ -333,7 +335,7 @@ function renderHistoryPanel() {
   const recEl = document.getElementById('history-records');
   if (recEl) {
     if (recent.length === 0) {
-      recEl.innerHTML = '<div class="history-empty">暂无对局记录，开始游戏吧！</div>';
+      recEl.innerHTML = '<div class="history-empty">' + t('history_empty') + '</div>';
     } else {
       var recHtml = '';
       for (var ri = 0; ri < recent.length; ri++) {
@@ -344,9 +346,9 @@ function renderHistoryPanel() {
         recHtml += '<div class="rec-header">';
         recHtml += '<span class="rec-result ' + (isWin ? 'win' : 'lose') + '">' + (isWin ? '✅' : '❌') + '</span>';
         recHtml += '<span class="rec-player">' + hEscape(r.player) + '</span>';
-        recHtml += '<span class="rec-score">' + r.score + '分</span>';
+        recHtml += '<span class="rec-score">' + r.score + 'pts</span>';
         recHtml += '<span class="rec-time">' + formatHistoryTime(r.timeSec) + '</span>';
-        recHtml += '<span class="mode-tag mode-' + r.mode + '">' + (MODE_LABELS[r.mode] || r.mode) + '</span>';
+        recHtml += '<span class="mode-tag mode-' + r.mode + '">' + getModeLabel(r.mode) + '</span>';
         recHtml += '</div>';
         recHtml += '<div class="rec-hand">' + (r.hand || []).map(function(v) { return cardFace(v); }).join(' ') + '</div>';
         if (r.formula) recHtml += '<div class="rec-formula">' + hEscape(r.formula) + '</div>';
@@ -355,11 +357,11 @@ function renderHistoryPanel() {
           var srTags = sr.tags || [];
           var levelTag = '';
           for (var tl = 0; tl < srTags.length; tl++) {
-            if (srTags[tl].indexOf('妙手天成') >= 0) levelTag = srTags[tl];
-            else if (!levelTag && srTags[tl].indexOf('炫技解法') >= 0) levelTag = srTags[tl];
-            else if (!levelTag && srTags[tl].indexOf('奇思妙算') >= 0) levelTag = srTags[tl];
+            if (srTags[tl].indexOf('Perfect Genius') >= 0) levelTag = srTags[tl];
+            else if (!levelTag && srTags[tl].indexOf('Flashy Solve') >= 0) levelTag = srTags[tl];
+            else if (!levelTag && srTags[tl].indexOf('Clever Math') >= 0) levelTag = srTags[tl];
           }
-          recHtml += '<div class="rec-rating">' + hEscape(levelTag) + ' · 评分 ' + sr.score + '</div>';
+          recHtml += '<div class="rec-rating">' + hEscape(levelTag) + ' \u00b7 Score ' + sr.score + '</div>';
         }
         if (rTags.length > 0) {
           recHtml += '<div class="rec-tags">';

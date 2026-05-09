@@ -132,12 +132,12 @@ function extractFirstStep(solution) {
 function describeCoolSolution(solution, handLength) {
   const expr = solution && solution.expr ? solution.expr : String(solution || '');
   const parts = [];
-  if (expr.indexOf('^') !== -1) parts.push('用了幂运算做跳板');
-  if (expr.indexOf('\u221A') !== -1 || expr.toLowerCase().indexOf('sqrt') !== -1) parts.push('先开方拆出好用的数');
-  if (expr.indexOf('!') !== -1) parts.push('用阶乘把小牌放大');
-  if (handLength >= 5) parts.push('五张牌都串进去了');
-  if (/7\s*\*\s*3|3\s*\*\s*7/.test(expr)) parts.push('最后收成 7×3');
-  return parts.length ? parts.join('，') : '结构很干净';
+  if (expr.indexOf('^') !== -1) parts.push(t('cool_desc_pow'));
+  if (expr.indexOf('\u221A') !== -1 || expr.toLowerCase().indexOf('sqrt') !== -1) parts.push(t('cool_desc_sqrt'));
+  if (expr.indexOf('!') !== -1) parts.push(t('cool_desc_fact'));
+  if (handLength >= 5) parts.push(t('cool_desc_5cards'));
+  if (/7\s*\*\s*3|3\s*\*\s*7/.test(expr)) parts.push(t('cool_desc_7x3'));
+  return parts.length ? parts.join('\uff0c') : t('cool_desc_clean');
 }
 
 function showHint() {
@@ -149,7 +149,7 @@ function showHint() {
   const cache = getCurrentSolutionCache();
   if (!cache || cache.pending) {
     clearSolutionHint();
-    showToast('我还在端详这手牌，提示次数先替你留着', 'submit');
+    showToast(t('hint_analyzing'), 'submit');
     renderAll();
     return;
   }
@@ -157,8 +157,8 @@ function showHint() {
   const solutions = solutionInfos.map(s => s.expr);
   if (cache.timedOut && solutions.length === 0) {
     clearSolutionHint();
-    showToast('这手牌藏得有点深，我先不消耗提示次数', 'submit');
-    addLog('提示：后台还在找更稳的思路，未消耗提示次数', 'hint');
+    showToast(t('hint_deep'), 'submit');
+    addLog(t('hint_log_retained'), 'hint');
     renderAll();
     return;
   }
@@ -167,12 +167,12 @@ function showHint() {
 
   if (solutions.length === 0) {
     const msgs = [
-      '🤔 这手牌现在还没露出通向21的路，加一张试试',
-      '🧐 还差一点火候，再补一张也许就亮了',
-      '😅 这组牌挺倔，换一组会更轻松'
+      t('hint_no_solution_1'),
+      t('hint_no_solution_2'),
+      t('hint_no_solution_3')
     ];
-    showToast('提示 #' + level + '：' + msgs[Math.min(level - 1, msgs.length - 1)], 'error');
-    addLog('提示 #' + level + '：当前手牌暂未找到解', 'hint');
+    showToast('Hint #' + level + ': ' + msgs[Math.min(level - 1, msgs.length - 1)], 'error');
+    addLog('Hint #' + level + ': no solution found', 'hint');
   } else if (level === 1) {
     const sol = solutions[0];
     const hasMul = sol.includes('*'), hasDiv = sol.includes('/'), hasAdd = sol.includes('+'), hasSub = sol.includes('-');
@@ -183,10 +183,10 @@ function showHint() {
     if (hasSub) parts.push('减法');
     if (!parts.length) parts.push('组合');
     const firstStep = extractFirstStep(sol);
-    let hintMsg = '提示 #1：这手牌可以往 ' + parts.join(' 和 ') + ' 方向试';
-    if (firstStep) hintMsg += '，先盯住「' + firstStep + '」';
+    let hintMsg = 'Hint #1: ' + t('hint_direction', {ops: parts.join(' \u548c ')});
+    if (firstStep) hintMsg += t('hint_direction_first', {first: firstStep});
     showToast(hintMsg, 'submit');
-    addLog('提示 #1：方向性提示已显示', 'hint');
+    addLog('Hint #1: directional hint shown', 'hint');
   } else if (level === 2) {
     const sol = solutions[0];
     const firstStep = extractFirstStep(sol);
@@ -195,23 +195,23 @@ function showHint() {
       if (tokens.length === 3 && tokens[0].type === TOK_NUM && tokens[1].type === TOK_OP && tokens[2].type === TOK_NUM) {
         try {
           const subVal = evaluate(firstStep);
-          showToast('提示 #2：先算出「' + firstStep + ' = ' + formatNum(subVal) + '」，再处理剩余牌', 'submit');
-          addLog('提示 #2：中间值提示  → ' + firstStep + ' = ' + formatNum(subVal), 'hint');
+          showToast('Hint #2: ' + t('hint_step_calc', {expr: firstStep, val: formatNum(subVal)}), 'submit');
+          addLog('Hint #2: intermediate value → ' + firstStep + ' = ' + formatNum(subVal), 'hint');
         } catch (e) {
-          showToast('提示 #2：尝试从「' + firstStep + '」开始', 'submit');
-          addLog('提示 #2：模糊步骤提示', 'hint');
+          showToast('Hint #2: try starting from "' + firstStep + '"', 'submit');
+          addLog('Hint #2: vague step hint', 'hint');
         }
       } else {
-        showToast('提示 #2：试试先把几张牌合成一个关键中间值', 'submit');
-        addLog('提示 #2：模糊步骤提示', 'hint');
+        showToast('Hint #2: ' + t('hint_step_try'), 'submit');
+        addLog('Hint #2: vague step hint', 'hint');
       }
     } else {
-      showToast('提示 #2：试着先合并其中两张牌', 'submit');
-      addLog('提示 #2：模糊步骤提示', 'hint');
+      showToast('Hint #2: ' + t('hint_step_merge'), 'submit');
+      addLog('Hint #2: vague step hint', 'hint');
     }
   } else {
-    showToast('答案：' + solutions[0] + ' = 21', 'win');
-    addLog('提示 #3（答案）：' + solutions[0] + ' = 21', 'hint');
+    showToast(t('hint_answer', {ans: solutions[0]}), 'win');
+    addLog('Hint #3 (answer): ' + solutions[0] + ' = 21', 'hint');
   }
   renderAll();
 }
@@ -224,20 +224,20 @@ function showCoolHint() {
   requestSolutionAnalysis();
   const cache = getCurrentSolutionCache();
   if (!cache || cache.pending) {
-    showToast('我在翻找这手牌的妙处，稍等一拍', 'submit');
+    showToast(t('hint_cool_searching'), 'submit');
     return;
   }
   if (!cache.cool.length) {
-    showToast('这手牌更适合朴素解法', 'submit');
+    showToast(t('hint_cool_simple'), 'submit');
     return;
   }
   const solution = cache.cool[0];
   const why = describeCoolSolution(solution, p ? p.hand.length : 0);
   State.set('coolHintUsed', true);
-  showToast('妙解思路：' + why + '。' + solution.expr + ' = 21', 'win');
-  addLog('妙解提示：' + why + ' → ' + solution.expr + ' = 21', 'hint');
+  showToast(t('hint_cool_prefix') + why + '。' + solution.expr + ' = 21', 'win');
+  addLog(t('hint_cool_prefix') + why + ' \u2192 ' + solution.expr + ' = 21', 'hint');
   if (p) {
-    p.feedback = '妙解：' + why + '｜' + solution.expr;
+    p.feedback = t('hint_cool_detail') + why + '\uff5c' + solution.expr;
     p.feedbackType = 'info';
   }
   renderAll();
@@ -248,30 +248,30 @@ function submitFormula(idx) {
   if (game.phase !== 'playing') return;
   const p = game.players[idx]; if (p.conceded) return;
   const expr = normalizeInput(p.inputDraft || '').trim();
-  if (!expr) { setFeedback(idx, '🤔 嗯？你的算式呢？别害羞~', 'err'); shakeCard(idx); soundPlay('error'); return; }
+  if (!expr) { setFeedback(idx, t('submit_no_expr'), 'err'); shakeCard(idx); soundPlay('error'); return; }
   const handValidation = validateHand(expr, p.hand);
   if (!handValidation.valid) {
     let fbMsg;
     if (handValidation.reason === 'notAllUsed') {
-      fbMsg = '还有 ' + handValidation.missing + ' 张牌没用！手牌必须全部用完哦~';
+      fbMsg = t('submit_not_all_used', {n: handValidation.missing});
     } else if (handValidation.reason === 'extraCards') {
-      fbMsg = '多了 ' + handValidation.extra + ' 张牌！请不要使用不属于你的牌~';
+      fbMsg = t('submit_extra_cards', {n: handValidation.extra});
     } else if (handValidation.reason === 'noMatch') {
-      fbMsg = '你没有用到任何手牌！请用手牌中的数字（' + p.hand.map(cardFace).join(' ') + '）组成算式~';
+      fbMsg = t('submit_no_match', {cards: p.hand.map(cardFace).join(' ')});
     } else if (handValidation.reason === 'invalidNumbers') {
-      fbMsg = '🚫 你用了不存在的牌值 ' + handValidation.invalidVals.join(', ') + '！牌面数字只能是 1~13（A=1, J=11, Q=12, K=13）';
+      fbMsg = t('submit_invalid_nums', {vals: handValidation.invalidVals.join(', ')});
     } else {
-      fbMsg = '手牌不匹配！请检查是否用了不属于你的牌~';
+      fbMsg = t('submit_mismatch');
     }
     setFeedback(idx, fbMsg, 'err');
-    addLog(p.name + ' 提交了算式，但手牌不匹配 ❌', 'err');
+    addLog(t('submit_hand_warn', {name: p.name}), 'err');
     shakeCard(idx); soundPlay('error'); return;
   }
   let result;
   try { result = evaluate(expr); }
-  catch (e) { setFeedback(idx, '🧮 算式格式错误: ' + e.message, 'err'); addLog(p.name + ' 提交了非法算式 ❌', 'err'); shakeCard(idx); soundPlay('error'); return; }
+  catch (e) { setFeedback(idx, t('submit_format_error', {msg: e.message}), 'err'); addLog(t('submit_invalid_log', {name: p.name}), 'err'); shakeCard(idx); soundPlay('error'); return; }
   if (typeof result !== 'number' || isNaN(result) || !isFinite(result)) {
-    setFeedback(idx, '计算结果无效', 'err'); addLog(p.name + ' 算式结果无效 ❌', 'err'); shakeCard(idx); soundPlay('error'); return;
+    setFeedback(idx, t('submit_result_invalid'), 'err'); addLog(t('submit_result_invalid_log', {name: p.name}), 'err'); shakeCard(idx); soundPlay('error'); return;
   }
   game.stats.submits++;
 
@@ -337,21 +337,21 @@ function submitFormula(idx) {
       }
     }
 
-    p.feedback = '=' + game.target + ' 获胜！+' + game.currentScore + '分';
+    p.feedback = t('submit_win_feedback', {target: game.target, score: game.currentScore});
 
     p.feedbackType = 'ok';
     p.winningFormula = expr;
     setFeedback(idx, p.feedback, 'ok');
-    var winMsg = p.name + ' 提交算式 "' + expr + '" = ' + game.target + ' 获胜！！！+' + game.currentScore + '分';
+    var winMsg = t('submit_win_log', {name: p.name, expr: expr, target: game.target, score: game.currentScore});
     addLog(winMsg, 'win');
-    var toastWin = p.name + ' 获胜！答案 = ' + game.target + ' +' + game.currentScore + '分';
+    var toastWin = p.name + ' Wins! ' + game.target + ' = ' + expr + ' +' + game.currentScore + 'pts';
     if (game.solutionRating && game.solutionRating.score >= 160) {
       var tags = game.solutionRating.tags || [];
       var levelTag = '';
       for (var t = 0; t < tags.length; t++) {
-        if (tags[t].indexOf('妙手天成') >= 0) levelTag = tags[t];
-        else if (!levelTag && tags[t].indexOf('炫技解法') >= 0) levelTag = tags[t];
-        else if (!levelTag && tags[t].indexOf('奇思妙算') >= 0) levelTag = tags[t];
+        if (tags[t].indexOf('Perfect Genius') >= 0) levelTag = tags[t];
+        else if (!levelTag && tags[t].indexOf('Flashy Solve') >= 0) levelTag = tags[t];
+        else if (!levelTag && tags[t].indexOf('Clever Math') >= 0) levelTag = tags[t];
       }
       if (levelTag) toastWin = levelTag.substring(0, 2) + ' ' + p.name + ' ' + levelTag + '！+' + game.currentScore + '分';
     }
@@ -359,42 +359,42 @@ function submitFormula(idx) {
     document.getElementById('hint-area').classList.add('hidden');
     soundPlay('win'); triggerVictoryEffect();
     showResult(idx); renderAll();
-    if (game.mode === 'local') updateTcEvent(p.name + ' 获胜！');
+    if (game.mode === 'local') updateTcEvent(t('tc_event_win', {name: p.name}));
   } else {
     const diff = result - game.target;
     const absDiff = Math.abs(diff);
     let fbMsg, toastMsg;
     if (absDiff <= 2) {
-      fbMsg = '差一点！= ' + formatNum(result) + '，就差 ' + formatNum(absDiff) + '！';
-      toastMsg = p.name + ' 提交 = ' + formatNum(result) + '（只差 ' + formatNum(absDiff) + '！）';
+      fbMsg = t('submit_close', {res: formatNum(result), diff: formatNum(absDiff)});
+      toastMsg = t('submit_close_toast', {name: p.name, res: formatNum(result), diff: formatNum(absDiff)});
     } else if (absDiff <= 10) {
-      fbMsg = '偏差 ' + formatNum(absDiff) + '，考虑用乘除调整试试';
-      toastMsg = p.name + ' 提交 = ' + formatNum(result) + '（偏差 ' + formatNum(absDiff) + '）';
+      fbMsg = t('submit_medium', {diff: formatNum(absDiff)});
+      toastMsg = t('submit_medium_toast', {name: p.name, res: formatNum(result), diff: formatNum(absDiff)});
     } else {
-      fbMsg = '偏了 ' + formatNum(absDiff) + '，离21有点远…';
-      toastMsg = p.name + ' 提交 = ' + formatNum(result) + '（差太远了）';
+      fbMsg = t('submit_far', {diff: formatNum(absDiff)});
+      toastMsg = t('submit_far_toast', {name: p.name, res: formatNum(result)});
     }
     setFeedback(idx, fbMsg, 'err');
-    addLog(p.name + ' 提交算式 "' + expr + '" = ' + formatNum(result) + ' ≠ ' + game.target + ' ❌', 'err');
+    addLog(p.name + ' submitted "' + expr + '" = ' + formatNum(result) + ' \u2260 ' + game.target + ' \u274c', 'err');
     showToast(toastMsg, 'error');
     shakeCard(idx); soundPlay('submit');
-    if (game.mode === 'local') updateTcEvent(p.name + ' 提交 = ' + formatNum(result));
+    if (game.mode === 'local') updateTcEvent(t('tc_event_submit', {name: p.name, res: formatNum(result)}));
   }
 }
 
 function drawForPlayer(idx) {
   if (game.phase !== 'playing') return;
   const p = game.players[idx]; if (p.conceded) return;
-  if (p.hand.length >= game.maxCards) { setFeedback(idx, '已达' + game.maxCards + '张上限', 'err'); return; }
-  if (!game.deck.length) { setFeedback(idx, '牌库已空', 'err'); return; }
+  if (p.hand.length >= game.maxCards) { setFeedback(idx, t('draw_max_reached', {max: game.maxCards}), 'err'); return; }
+  if (!game.deck.length) { setFeedback(idx, t('draw_empty_deck'), 'err'); return; }
   const card = drawCard(); if (card === null) return;
-  p.hand.push(card); p.feedback = '加牌: +' + cardFace(card); p.feedbackType = 'ok';
-  addLog(p.name + ' 加了一张牌 → ' + cardFace(card) + ' (手牌' + p.hand.length + '张)', 'info');
-  showToast(p.name + ' +牌 → ' + cardFace(card), 'draw');
+  p.hand.push(card); p.feedback = t('draw_feedback', {card: cardFace(card)}); p.feedbackType = 'ok';
+  addLog(t('draw_log', {name: p.name, card: cardFace(card), count: p.hand.length}), 'info');
+  showToast(t('draw_toast', {name: p.name, card: cardFace(card)}), 'draw');
   if (game.mode === 'solo') { game.stats.draws++; _lastCheckedHand = ''; resetSolutionCache(); }
   p._newCardIdx = p.hand.length - 1;
   updateDeckCount(); renderAll(); updateFooterBar();
-  if (game.mode === 'local') updateTcEvent(p.name + ' +牌 → ' + cardFace(card));
+  if (game.mode === 'local') updateTcEvent(t('tc_event_draw', {name: p.name, card: cardFace(card)}));
   if (game.mode === 'solo') updateSolutionHint();
   soundPlay('draw');
   if (game.mode === 'ai' && p.isAi) scheduleAiThink();
@@ -403,7 +403,7 @@ function drawForPlayer(idx) {
 function concedePlayer(idx) {
   if (game.phase !== 'playing') return;
   const p = game.players[idx]; if (p.conceded) return;
-  p.conceded = true; p.feedback = '已认输'; p.feedbackType = '';
+  p.conceded = true; p.feedback = t('concede_feedback'); p.feedbackType = '';
 
   // 记录认输（AI不写入历史）
   if (!p.isAi) {
@@ -419,9 +419,9 @@ function concedePlayer(idx) {
     });
   }
 
-  addLog(p.name + ' 认输了', 'info');
-  showToast(p.name + ' 认输', 'concede');
-  if (game.mode === 'local') updateTcEvent(p.name + ' 认输');
+  addLog(t('concede_log', {name: p.name}), 'info');
+  showToast(t('concede_toast', {name: p.name}), 'concede');
+  if (game.mode === 'local') updateTcEvent(t('tc_event_concede', {name: p.name}));
   renderAll(); updateFooterBar();
   checkGameEnd();
 }
@@ -431,13 +431,13 @@ function checkGameEnd() {
   const active = game.players.filter(p => !p.conceded);
   if (active.length === 0) {
     State.set('phase', 'ended'); stopTimer(); stopAiThinking();
-    addLog('所有玩家都认输了，本局无胜者', 'info');
+    addLog(t('concede_all'), 'info');
     showResult(-1); renderAll(); return;
   }
   if (game.mode === 'ai' && active.length === 1 && active[0].isAi) {
     State.set('phase', 'ended'); stopTimer(); stopAiThinking();
     const ai = game.players[game.aiPlayerIndex];
-    ai.feedback = '对手认输，AI获胜！'; ai.feedbackType = 'ok';
+    ai.feedback = t('concede_ai_win'); ai.feedbackType = 'ok';
 
     // 记录人类玩家失败
     const humanIdx = game.aiPlayerIndex === 0 ? 1 : 0;
@@ -455,8 +455,8 @@ function checkGameEnd() {
       });
     }
 
-    addLog('AI获胜！所有人类玩家已认输', 'win');
-    showToast('AI获胜！', 'win');
+    addLog(t('concede_ai_win_log'), 'win');
+    showToast('AI Wins!', 'win');
     triggerVictoryEffect();
     showResult(game.aiPlayerIndex); renderAll();
   }
@@ -486,7 +486,7 @@ function scheduleAiThink() {
     const solutions = aiSolve([...ai.hand], game.target, getBinaryOps(), { maxMs: SOLVE_BUDGETS.aiThinkMs });
     const hasSolution = solutions.length > 0;
     if (solutions.timedOut && !hasSolution) {
-      addLog('AI求解超过' + SOLVE_BUDGETS.aiThinkMs + 'ms，暂时按想不出处理', 'info');
+      addLog('AI solve took longer than ' + SOLVE_BUDGETS.aiThinkMs + 'ms, treating as no solution', 'info');
     }
     State.set('aiSolved', hasSolution);
     State.set('aiSolution', hasSolution ? solutions[0] : null);
@@ -509,7 +509,7 @@ function scheduleAiThink() {
       const card = document.querySelector('.player-card[data-index="' + aiIdx + '"]');
       if (card) {
         const st = card.querySelector('.player-status');
-        if (st && game.aiThinking) st.textContent = '思考中... ' + Math.max(0, game.aiCountdown) + 's';
+        if (st && game.aiThinking) st.textContent = t('status_thinking', {N: Math.max(0, game.aiCountdown)});
       }
     }, 1000));
 
@@ -523,8 +523,8 @@ function scheduleAiThink() {
       if (willSucceed && solutions.length > 0) {
         const sol = solutions[0];
         ai.inputDraft = sol;
-        addLog(ai.name + ' 提交了答案！', 'info');
-        showToast(ai.name + ' 提交了答案！', 'submit');
+        addLog(ai.name + ' submitted answer!', 'info');
+        showToast(ai.name + ' submitted answer!', 'submit');
         renderAll();
         setTimeout(() => {
           const input = document.querySelector('.player-card[data-index="' + aiIdx + '"] .formula-input');
@@ -533,16 +533,16 @@ function scheduleAiThink() {
         }, 400);
       } else {
         if (ai.hand.length >= game.maxCards || !game.deck.length) {
-          ai.conceded = true; ai.feedback = 'AI认输'; ai.feedbackType = '';
-          addLog(ai.name + ' 表示放弃', 'info');
-          showToast(ai.name + ' 认输', 'concede');
+          ai.conceded = true; ai.feedback = 'AI gave up'; ai.feedbackType = '';
+          addLog(ai.name + ' gave up', 'info');
+          showToast(ai.name + ' gave up', 'concede');
           checkGameEnd();
         } else {
           const card = drawCard();
           if (card !== null) {
             ai.hand.push(card);
-            addLog(ai.name + ' 想不出，加了一张牌 → ' + cardFace(card) + ' (手牌' + ai.hand.length + '张)', 'info');
-            showToast(ai.name + ' +牌 → ' + cardFace(card), 'draw');
+            addLog(ai.name + ' ' + t('draw_log', {name: ai.name, card: cardFace(card), count: ai.hand.length}), 'info');
+            showToast(t('draw_toast', {name: ai.name, card: cardFace(card)}), 'draw');
             updateDeckCount();
             if (game.phase === 'playing') scheduleAiThink();
           }
@@ -561,7 +561,7 @@ function selectDifficulty(diff, btn) {
   resetSolutionCache();
   document.querySelectorAll('#menu-overlay .choice-card').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  document.getElementById('diff-badge').textContent = { easy: '简单', normal: '普通', hard: '困难' }[diff];
+  document.getElementById('diff-badge').textContent = t('diff_badge_' + diff);
   document.getElementById('diff-badge').className = 'diff-badge ' + (diff === 'easy' ? 'diff-easy' : diff === 'normal' ? 'diff-normal' : 'diff-hard');
 }
 
@@ -573,7 +573,7 @@ function selectAiLevel(lvl, btn) {
 
 function showComingSoon() {
   if (typeof openOnlineSetup === 'function') openOnlineSetup();
-  else alert('联网对战模式即将推出，敬请期待！');
+  else alert(t('coming_soon'));
 }
 
 function showRules() { document.getElementById('rules-overlay').classList.remove('hidden'); }
@@ -594,7 +594,7 @@ function goToMenu() {
   document.getElementById('players-area').classList.remove('tabletop-2p', 'tabletop-3p', 'tabletop-4p');
   if (tc) { document.getElementById('main-container').appendChild(tc); tc.classList.add('hidden'); }
   document.getElementById('log-panel').innerHTML = '';
-  document.getElementById('footer-bar').innerHTML = (typeof footerIcon === 'function' ? footerIcon('card') : '<span class="icon">♠</span>') + '准备开始游戏...';
+  document.getElementById('footer-bar').innerHTML = (typeof footerIcon === 'function' ? footerIcon('card') : '<span class="icon">\u2660</span>') + t('footer_ready');
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   document.getElementById('menu-overlay').classList.remove('hidden');
@@ -719,7 +719,7 @@ function updateResultAgainButton() {
         status.className = 'result-rematch-status warn';
       }
     } else if (status) {
-      status.textContent = '将从当前剩余牌库发牌，上一局手牌不回库。';
+      status.textContent = t('rematch_will_deal_from');
       status.className = 'result-rematch-status';
     }
   } else if (game.mode === 'online' && typeof updateOnlineRematchResultUi === 'function') {
@@ -732,7 +732,7 @@ function startLocalRematch() {
   if (game.phase !== 'ended') return;
   if (!canStartLocalRematch()) {
     updateResultAgainButton();
-    showToast('牌库不足，请返回菜单重新开局', 'error');
+    showToast(t('rematch_local_deck_short'), 'error');
     return;
   }
   stopTimer(); stopAiThinking();
@@ -760,7 +760,7 @@ function startLocalRematch() {
   startTimer();
   document.getElementById('result-overlay').classList.add('hidden');
   document.getElementById('table-setup-overlay').classList.add('hidden');
-  addLog('再来一局：从当前剩余牌库重新发牌。', 'info');
+  addLog(t('rematch_starting_from_deck'), 'info');
   renderAll();
   updateFooterBar();
 }
@@ -778,15 +778,15 @@ function handleAgainGame() {
 function startSoloGame() {
   if (typeof clearSolutionHint === 'function') clearSolutionHint();
   resetSolutionCache();
-  initPlayers(['玩家'], [false]);
+  initPlayers([t('player_default')], [false]);
   dealCards();
   State.set('phase', 'playing'); State.set('stats', { submits: 0, hintsUsed: 0, maxHints: 3, draws: 0 });
   State.set('currentScore', 0); State.set('scoreBreakdown', []); State.set('solutionRating', null); State.set('gameTags', []);
   updateDeckCount(); startTimer();
   document.getElementById('result-overlay').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
-  addLog('单人练习开始！试试用算式算出' + game.target + '吧', 'info');
-  addLog('点击提示按钮获取帮助（共' + game.stats.maxHints + '次）', 'info');
+  addLog(t('start_solo_log', {target: game.target}), 'info');
+  addLog(t('start_solo_hint_log', {count: game.stats.maxHints}), 'info');
   renderAll(); updateFooterBar(); updateSolutionHint();
 }
 
@@ -805,16 +805,15 @@ function startLocalGame() {
   updateDeckCount(); startTimer();
   document.getElementById('table-setup-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
-  const playerLabels = { 2: '双人对坐', 3: '三人围桌', 4: '四方会战' };
-  addLog('围桌对战开始！' + (playerLabels[count] || '') + '，谁先用算式算出' + game.target + '谁获胜！', 'info');
+  addLog(t('start_local_log', {layout: t('start_local_' + count + 'p'), target: game.target}), 'info');
   renderAll(); updateFooterBar();
 }
 
 function startAiGame() {
   const nameInput = document.getElementById('ai-player-name');
-  const playerName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : '玩家';
-  const aiLevelNames = { easy: '新手赌徒', medium: '老练玩家', hard: '数学教授' };
-  const aiName = 'AI · ' + aiLevelNames[game.aiLevel];
+  const playerName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : t('player_default');
+  const aiLevelNames = { easy: t('ai_easy'), medium: t('ai_medium'), hard: t('ai_hard') };
+  const aiName = 'AI ' + aiLevelNames[game.aiLevel];
   State.set('aiPlayerIndex', 1);
   initPlayers([playerName, aiName], [false, true]);
   dealCards();
@@ -823,8 +822,8 @@ function startAiGame() {
   updateDeckCount(); startTimer();
   document.getElementById('ai-setup-overlay').classList.add('hidden');
   document.getElementById('result-overlay').classList.add('hidden');
-  addLog('AI对战开始！对手：' + aiName, 'info');
-  addLog('你和AI同时开始思考，先算出21者获胜！', 'info');
+  addLog(t('start_ai_log', {name: aiName}), 'info');
+  addLog(t('start_ai_intro'), 'info');
   renderAll();
   scheduleAiThink();
   updateFooterBar();
@@ -865,12 +864,12 @@ function showResult(winnerIdx) {
       if (ratingEl && game.solutionRating && game.solutionRating.score >= 160) {
         const sr = game.solutionRating;
         const levelTag = (sr.tags || []).find(function(t) {
-          return t.indexOf('妙手天成') >= 0 || t.indexOf('炫技解法') >= 0 || t.indexOf('奇思妙算') >= 0;
+          return t.indexOf('Perfect Genius') >= 0 || t.indexOf('Flashy Solve') >= 0 || t.indexOf('Clever Math') >= 0;
         }) || '';
         var ratingIcon = 'star';
-        if (levelTag.indexOf('妙手天成') >= 0) ratingIcon = 'trophy';
-        else if (levelTag.indexOf('炫技解法') >= 0) ratingIcon = 'sparkle';
-        else if (levelTag.indexOf('奇思妙算') >= 0) ratingIcon = 'aiHard';
+        if (levelTag.indexOf('Perfect Genius') >= 0) ratingIcon = 'trophy';
+        else if (levelTag.indexOf('Flashy Solve') >= 0) ratingIcon = 'sparkle';
+        else if (levelTag.indexOf('Clever Math') >= 0) ratingIcon = 'aiHard';
         ratingEl.innerHTML = '<span class="rating-badge">' + (typeof svgIcon === 'function' ? svgIcon(ratingIcon) : '') + '</span>' +
           '<span class="rating-score">' + levelTag + ' · 评分 ' + sr.score + '</span>';
         ratingEl.classList.remove('hidden');
@@ -920,7 +919,7 @@ function resetGame() {
   document.getElementById('players-area').classList.remove('tabletop-2p', 'tabletop-3p', 'tabletop-4p');
   if (tc2) { document.getElementById('main-container').appendChild(tc2); tc2.classList.add('hidden'); }
   document.getElementById('log-panel').innerHTML = '';
-  document.getElementById('footer-bar').innerHTML = (typeof footerIcon === 'function' ? footerIcon('card') : '<span class="icon">♠</span>') + '准备开始游戏...';
+  document.getElementById('footer-bar').innerHTML = (typeof footerIcon === 'function' ? footerIcon('card') : '<span class="icon">\u2660</span>') + t('footer_ready');
   document.getElementById('stats-panel').classList.add('hidden');
   document.getElementById('hint-area').classList.add('hidden');
   if (game.mode === 'local') {
