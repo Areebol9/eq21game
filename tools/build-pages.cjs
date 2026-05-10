@@ -6,7 +6,7 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
 const OUT = path.join(ROOT, "dist");
-const STATIC_FILES = ["index.html", "share.html", "style.css", "manifest.json", "robots.txt", "sitemap.xml", "_headers"];
+const STATIC_FILES = ["index.html", "share.html", "style.css", "manifest.json", "robots.txt", "_headers"];
 const STATIC_DIRS = ["js", "assets"];
 let buildCounter = 0;
 
@@ -67,6 +67,29 @@ function writeServiceWorker(cacheVersion) {
   return cacheName;
 }
 
+function writeSitemap() {
+  const today = new Date().toISOString().slice(0, 10);
+  const content = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    '  <url>',
+    '    <loc>https://eq21game.com/</loc>',
+    '    <lastmod>' + today + '</lastmod>',
+    '    <changefreq>weekly</changefreq>',
+    '    <priority>1.0</priority>',
+    '  </url>',
+    '  <url>',
+    '    <loc>https://eq21game.com/share</loc>',
+    '    <lastmod>' + today + '</lastmod>',
+    '    <changefreq>weekly</changefreq>',
+    '    <priority>0.5</priority>',
+    '  </url>',
+    '</urlset>',
+    ''
+  ].join("\n");
+  fs.writeFileSync(path.join(OUT, "sitemap.xml"), content, "utf8");
+}
+
 function buildPages(options) {
   const opts = options || {};
   const onlineUrl = normalizeUrl(Object.prototype.hasOwnProperty.call(opts, "onlineUrl") ? opts.onlineUrl : process.env.EQ21_ONLINE_URL) || "https://online.eq21game.com";
@@ -79,6 +102,7 @@ function buildPages(options) {
   }
   for (const dir of STATIC_DIRS) copyDir(dir);
   const cacheName = writeServiceWorker(cacheVersion);
+  writeSitemap();
   writeDeployConfig(onlineUrl);
 
   if (!opts.quiet) {
