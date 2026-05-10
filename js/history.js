@@ -293,10 +293,10 @@ function renderHistoryPanel() {
       var sr = best.solutionRating;
       var srTags = sr.tags || [];
       var levelTag = '';
-      for (var t = 0; t < srTags.length; t++) {
-        if (srTags[t].indexOf('Perfect Genius') >= 0) levelTag = srTags[t];
-        else if (!levelTag && srTags[t].indexOf('Flashy Solve') >= 0) levelTag = srTags[t];
-        else if (!levelTag && srTags[t].indexOf('Clever Math') >= 0) levelTag = srTags[t];
+      for (var ti = 0; ti < srTags.length; ti++) {
+        if (srTags[ti].indexOf('Perfect Genius') >= 0) levelTag = srTags[ti];
+        else if (!levelTag && srTags[ti].indexOf('Flashy Solve') >= 0) levelTag = srTags[ti];
+        else if (!levelTag && srTags[ti].indexOf('Clever Math') >= 0) levelTag = srTags[ti];
       }
       if (levelTag) bestHtml += '<div class="best-rating">' + levelTag + ' · ' + sr.score + '</div>';
     }

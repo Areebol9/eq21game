@@ -348,10 +348,10 @@ function submitFormula(idx) {
     if (game.solutionRating && game.solutionRating.score >= 160) {
       var tags = game.solutionRating.tags || [];
       var levelTag = '';
-      for (var t = 0; t < tags.length; t++) {
-        if (tags[t].indexOf('Perfect Genius') >= 0) levelTag = tags[t];
-        else if (!levelTag && tags[t].indexOf('Flashy Solve') >= 0) levelTag = tags[t];
-        else if (!levelTag && tags[t].indexOf('Clever Math') >= 0) levelTag = tags[t];
+      for (var ti = 0; ti < tags.length; ti++) {
+        if (tags[ti].indexOf('Perfect Genius') >= 0) levelTag = tags[ti];
+        else if (!levelTag && tags[ti].indexOf('Flashy Solve') >= 0) levelTag = tags[ti];
+        else if (!levelTag && tags[ti].indexOf('Clever Math') >= 0) levelTag = tags[ti];
       }
       if (levelTag) toastWin = levelTag.substring(0, 2) + ' ' + p.name + ' ' + levelTag + '！+' + game.currentScore + '分';
     }
@@ -863,15 +863,15 @@ function showResult(winnerIdx) {
       // 妙解评级
       if (ratingEl && game.solutionRating && game.solutionRating.score >= 160) {
         const sr = game.solutionRating;
-        const levelTag = (sr.tags || []).find(function(t) {
-          return t.indexOf('Perfect Genius') >= 0 || t.indexOf('Flashy Solve') >= 0 || t.indexOf('Clever Math') >= 0;
+        const levelTag = (sr.tags || []).find(function(tag) {
+          return tag.indexOf('Perfect Genius') >= 0 || tag.indexOf('Flashy Solve') >= 0 || tag.indexOf('Clever Math') >= 0;
         }) || '';
         var ratingIcon = 'star';
         if (levelTag.indexOf('Perfect Genius') >= 0) ratingIcon = 'trophy';
         else if (levelTag.indexOf('Flashy Solve') >= 0) ratingIcon = 'sparkle';
         else if (levelTag.indexOf('Clever Math') >= 0) ratingIcon = 'aiHard';
         ratingEl.innerHTML = '<span class="rating-badge">' + (typeof svgIcon === 'function' ? svgIcon(ratingIcon) : '') + '</span>' +
-          '<span class="rating-score">' + levelTag + ' · 评分 ' + sr.score + '</span>';
+          '<span class="rating-score">' + levelTag + ' \u00b7 Score ' + sr.score + '</span>';
         ratingEl.classList.remove('hidden');
       }
       // 标签
